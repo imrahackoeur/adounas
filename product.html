@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solo | Product Details</title>
+  </head>
+  <body>
+
+    <!-- ── Navbar ────────────────────────────────────────── -->
+    <nav class="navbar" id="navbar">
+      <a href="/" class="logo">Adouna Amoul Solo.</a>
+
+      <div class="nav-links" id="nav-links">
+        <a href="/#products" class="nav-link">Shop All</a>
+        <a href="#" class="nav-link">New Arrivals</a>
+        <a href="#" class="nav-link">About</a>
+        <a href="/admin.html" class="nav-link nav-admin">⚙ Admin</a>
+      </div>
+
+      <div class="nav-right">
+        <!-- Search toggle -->
+        <button class="icon-btn" id="search-toggle" aria-label="Search">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" fill="none" />
+          </svg>
+        </button>
+
+        <!-- Account Button / Dropdown -->
+        <div class="nav-user-wrap">
+          <button class="nav-user-btn" id="nav-user-btn" aria-label="Account">
+            <svg viewBox="0 0 24 24" class="user-svg">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            <span class="nav-user-label" id="nav-user-label">Sign In</span>
+          </button>
+          <div class="nav-user-dropdown" id="nav-user-dropdown">
+            <div class="user-dropdown-header">
+              <div class="user-dropdown-name" id="user-dropdown-name">User</div>
+              <div class="user-dropdown-email" id="user-dropdown-email">user@email.com</div>
+            </div>
+            <button class="user-dropdown-item" id="user-logout-btn">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              Sign Out
+            </button>
+          </div>
+        </div>
+
+        <!-- Cart -->
+        <div class="cart-icon-wrapper" id="cart-icon" role="button" aria-label="Open cart">
+          <svg viewBox="0 0 24 24" class="cart-svg">
+            <path
+              d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 13.1 5.9 14 7 14h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.25 3H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
+          </svg>
+          <span class="cart-count" id="cart-count">0</span>
+        </div>
+        <!-- Hamburger (mobile) -->
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ── Mobile Nav Drawer ─────────────────────────────── -->
+    <div class="mobile-drawer" id="mobile-drawer">
+      <a href="/#products" class="mobile-nav-link" id="mob-shop">Shop All</a>
+      <a href="#" class="mobile-nav-link">New Arrivals</a>
+      <a href="#" class="mobile-nav-link">About</a>
+      <a href="/admin.html" class="mobile-nav-link" style="color:var(--accent)">⚙ Admin</a>
+    </div>
+
+    <!-- ── Search Bar ────────────────────────────────────── -->
+    <div class="search-bar-wrapper" id="search-bar-wrapper">
+      <div class="search-bar-inner">
+        <svg viewBox="0 0 24 24" class="search-icon-inner">
+          <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" fill="none" />
+        </svg>
+        <input type="text" id="search-input" placeholder="Search products (e.g., Backpack)..." autocomplete="off">
+        <button id="search-clear" aria-label="Clear search">✕</button>
+      </div>
+    </div>
+
+    <!-- ── Product Detail Layout ─────────────────────────── -->
+    <main class="pdp-container" id="pdp-container">
+      <div class="pdp-loading" id="pdp-loading">Loading product details...</div>
+      
+      <div class="pdp-content" id="pdp-content" style="display: none;">
+        <!-- Left: Image Gallery -->
+        <div class="pdp-gallery">
+          <div class="pdp-main-image-wrap">
+            <img id="pdp-main-image" src="" alt="Product">
+          </div>
+          <div class="pdp-thumbnails" id="pdp-thumbnails">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Right: Info & Actions -->
+        <div class="pdp-info">
+          <div class="pdp-category" id="pdp-category"></div>
+          <h1 class="pdp-title" id="pdp-title"></h1>
+          <div class="pdp-price" id="pdp-price"></div>
+          <p class="pdp-desc" id="pdp-desc"></p>
+          
+          <div class="pdp-actions">
+            <div class="pdp-qty-wrapper">
+              <button class="pdp-qty-btn" id="pdp-qty-minus">−</button>
+              <span class="pdp-qty-val" id="pdp-qty-val">1</span>
+              <button class="pdp-qty-btn" id="pdp-qty-plus">+</button>
+            </div>
+            <button class="btn btn-primary pdp-add-btn" id="pdp-add-btn">Add to Cart</button>
+          </div>
+          
+          <div class="pdp-trust">
+            <div class="trust-item"><span>🚚</span> Free shipping over $100</div>
+            <div class="trust-item"><span>🔄</span> 30-day return policy</div>
+            <div class="trust-item"><span>🔒</span> Secure Stripe checkout</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── Cart Sidebar (Same as index) ──────────────────── -->
+    <div class="overlay" id="overlay"></div>
+    <div class="cart-sidebar" id="cart-sidebar">
+      <div class="cart-header">
+        <h2>Your Cart <span id="cart-qty-label"></span></h2>
+        <button class="close-cart" id="close-cart" aria-label="Close cart">✕</button>
+      </div>
+      <div class="cart-items" id="cart-items"></div>
+      <div class="cart-delivery-form">
+        <div class="cart-delivery-title">📦 Delivery Details</div>
+        <input type="text" id="delivery-name"     placeholder="Your full name *"       maxlength="60">
+        <input type="tel"  id="delivery-phone"    placeholder="Phone number *"          maxlength="20">
+        <input type="text" id="delivery-location" placeholder="City / Neighborhood *"  maxlength="120">
+      </div>
+      <div class="cart-footer">
+        <div class="cart-total"><span>Total</span><span id="cart-total-price">$0.00</span></div>
+        <div class="cart-cod-badge">💵 Cash on Delivery</div>
+        <button class="btn btn-primary" id="checkout-btn" style="width:100%">Place Order</button>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-bottom">
+        <p>&copy; 2026 Solo Essentials. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <!-- ── In-App Chat Widget ────────────────────────────────── -->
+    <div id="chat-widget" class="chat-widget">
+      <button class="chat-trigger-btn" id="chat-trigger-btn" aria-label="Open chat">
+        <svg id="chat-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <svg id="chat-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        <span class="chat-unread-badge" id="chat-unread-badge" style="display:none">!</span>
+      </button>
+      <div class="chat-window" id="chat-window" style="display:none">
+        <div class="chat-window-header">
+          <div class="chat-header-info">
+            <div class="chat-avatar">S</div>
+            <div>
+              <div class="chat-header-name">Solo Support</div>
+              <div class="chat-header-status">We reply quickly!</div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-name-prompt" id="chat-name-prompt">
+          <p>👋 Hi! What's your name?</p>
+          <div class="chat-name-form">
+            <input type="text" id="chat-name-input" placeholder="Your name..." maxlength="40">
+            <button class="btn btn-primary" id="chat-name-submit">Start Chat</button>
+          </div>
+        </div>
+        <div class="chat-messages" id="chat-messages" style="display:none"></div>
+        <div class="chat-input-row" id="chat-input-row" style="display:none">
+          <input type="text" id="chat-input" placeholder="Type a message..." maxlength="500" autocomplete="off">
+          <button class="chat-send-btn" id="chat-send-btn" aria-label="Send">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Customer Auth Modal ────────────────────────────── -->
+    <div class="auth-overlay" id="auth-overlay">
+      <div class="auth-modal" id="auth-modal">
+        <button class="auth-close" id="auth-close" aria-label="Close modal">✕</button>
+        
+        <div class="auth-header">
+          <div class="logo">Adouna Amoul Solo.</div>
+          <h2 id="auth-modal-title">Welcome to Solo</h2>
+          <p class="auth-modal-sub" id="auth-modal-sub">Sign in or create an account to proceed</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="auth-tab-login">Sign In</button>
+          <button class="auth-tab" id="auth-tab-register">Create Account</button>
+        </div>
+
+        <!-- Login Form -->
+        <form class="auth-form" id="auth-form-login">
+          <div class="auth-form-group">
+            <label for="auth-login-email">Email Address</label>
+            <input type="email" id="auth-login-email" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="auth-form-group">
+            <label for="auth-login-password">Password</label>
+            <input type="password" id="auth-login-password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <div class="auth-error" id="auth-login-error" style="display:none"></div>
+          <button type="submit" class="btn btn-primary auth-submit-btn">Sign In & Continue</button>
+        </form>
+
+        <!-- Register Form -->
+        <form class="auth-form" id="auth-form-register" style="display:none">
+          <div class="auth-form-group">
+            <label for="auth-reg-name">Full Name</label>
+            <input type="text" id="auth-reg-name" placeholder="John Doe" required autocomplete="name">
+          </div>
+          <div class="auth-form-group">
+            <label for="auth-reg-email">Email Address</label>
+            <input type="email" id="auth-reg-email" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="auth-form-group">
+            <label for="auth-reg-password">Create Password (min 6 chars)</label>
+            <input type="password" id="auth-reg-password" placeholder="••••••••" minlength="6" required autocomplete="new-password">
+          </div>
+          <div class="auth-error" id="auth-reg-error" style="display:none"></div>
+          <button type="submit" class="btn btn-primary auth-submit-btn">Create Account & Continue</button>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/product.js"></script>
+    <script type="module" src="/src/chat.js"></script>
+  </body>
+</html>

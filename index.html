@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solo | Premium Essentials</title>
+  <meta name="description"
+    content="Discover premium essentials designed to elevate your everyday lifestyle. Solo offers a curated selection of minimalist, high-quality products.">
+</head>
+
+<body>
+
+  <!-- ── Navbar ────────────────────────────────────────── -->
+  <nav class="navbar" id="navbar">
+    <a href="/" class="logo">Adouna Amoul Solo.</a>
+
+    <div class="nav-links" id="nav-links">
+      <a href="#products" class="nav-link">Shop All</a>
+      <a href="#" class="nav-link">New Arrivals</a>
+      <a href="#" class="nav-link">About</a>
+      <a href="/admin.html" class="nav-link nav-admin">⚙ Admin</a>
+    </div>
+
+    <div class="nav-right">
+      <!-- Search toggle -->
+      <button class="icon-btn" id="search-toggle" aria-label="Search">
+        <svg viewBox="0 0 24 24">
+          <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" fill="none" />
+        </svg>
+      </button>
+
+      <!-- Account Button / Dropdown -->
+      <div class="nav-user-wrap">
+        <button class="nav-user-btn" id="nav-user-btn" aria-label="Account">
+          <svg viewBox="0 0 24 24" class="user-svg">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <span class="nav-user-label" id="nav-user-label">Sign In</span>
+        </button>
+        <div class="nav-user-dropdown" id="nav-user-dropdown">
+          <div class="user-dropdown-header">
+            <div class="user-dropdown-name" id="user-dropdown-name">User</div>
+            <div class="user-dropdown-email" id="user-dropdown-email">user@email.com</div>
+          </div>
+          <button class="user-dropdown-item" id="user-logout-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Sign Out
+          </button>
+        </div>
+      </div>
+
+      <!-- Cart -->
+      <div class="cart-icon-wrapper" id="cart-icon" role="button" aria-label="Open cart">
+        <svg viewBox="0 0 24 24" class="cart-svg">
+          <path
+            d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 13.1 5.9 14 7 14h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.25 3H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
+        </svg>
+        <span class="cart-count" id="cart-count">0</span>
+      </div>
+      <!-- Hamburger (mobile) -->
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── Mobile Nav Drawer ─────────────────────────────── -->
+  <div class="mobile-drawer" id="mobile-drawer">
+    <a href="#products" class="mobile-nav-link" id="mob-shop">Shop All</a>
+    <a href="#" class="mobile-nav-link">New Arrivals</a>
+    <a href="#" class="mobile-nav-link">About</a>
+    <a href="/admin.html" class="mobile-nav-link" style="color:var(--accent)">⚙ Admin</a>
+  </div>
+
+  <!-- ── Search Bar ────────────────────────────────────── -->
+  <div class="search-bar-wrapper" id="search-bar-wrapper">
+    <div class="search-bar-inner">
+      <svg viewBox="0 0 24 24" class="search-icon-inner">
+        <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" fill="none" />
+      </svg>
+      <input type="text" id="search-input" placeholder="Search products…" autocomplete="off">
+      <button class="search-clear" id="search-clear" aria-label="Clear search">✕</button>
+    </div>
+  </div>
+
+  <!-- ── Hero Section ──────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-tag">Premium Collection 2026</div>
+    <h1>Everyday<br><span class="hero-accent">Elevated.</span></h1>
+    <p>Minimalist essentials crafted for those who demand quality in every detail. Curated. Refined. Solo.</p>
+    <div class="hero-cta">
+      <button class="btn btn-primary"
+        onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">Explore Collection</button>
+      <button class="btn btn-ghost">Learn More</button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><strong>200+</strong><span>Products</span></div>
+      <div class="stat-div"></div>
+      <div class="stat"><strong>4.9★</strong><span>Rating</span></div>
+      <div class="stat-div"></div>
+      <div class="stat"><strong>Free</strong><span>Shipping</span></div>
+    </div>
+  </section>
+
+  <!-- ── Products Section ──────────────────────────────── -->
+  <section class="products-section" id="products">
+    <div class="section-header">
+      <h2 class="section-title">Featured Products</h2>
+      <div class="filter-tabs" id="filter-tabs">
+        <button class="filter-tab active" data-cat="all">All</button>
+      </div>
+    </div>
+    <div class="product-grid" id="product-grid">
+      <!-- Rendered by JS -->
+    </div>
+  </section>
+
+  <!-- ── Footer ────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="logo footer-logo">Solo.</div>
+        <p>Premium essentials for modern living.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Shop</h4>
+        <a href="#">All Products</a>
+        <a href="#">New Arrivals</a>
+        <a href="#">Best Sellers</a>
+      </div>
+      <div class="footer-links">
+        <h4>Company</h4>
+        <a href="#">About Us</a>
+        <a href="#">Contact</a>
+        <a href="#">Privacy Policy</a>
+      </div>
+      <div class="footer-newsletter">
+        <h4>Stay Updated</h4>
+        <p>Get the latest drops in your inbox.</p>
+        <div class="newsletter-form">
+          <input type="email" placeholder="you@email.com">
+          <button class="btn btn-primary">Subscribe</button>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Solo Essentials. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- ── Cart Overlay + Sidebar ────────────────────────── -->
+  <div class="overlay" id="overlay"></div>
+  <div class="cart-sidebar" id="cart-sidebar">
+    <div class="cart-header">
+      <h2>Your Cart <span class="cart-qty-label" id="cart-qty-label"></span></h2>
+      <button class="close-cart" id="close-cart" aria-label="Close cart">✕</button>
+    </div>
+    <div class="cart-items" id="cart-items"></div>
+    <div class="cart-delivery-form">
+      <div class="cart-delivery-title">📦 Delivery Details</div>
+      <input type="text"  id="delivery-name"     placeholder="Your full name *"         maxlength="60">
+      <input type="tel"   id="delivery-phone"    placeholder="Phone number *"            maxlength="20">
+      <input type="text"  id="delivery-location" placeholder="City / Neighborhood *"    maxlength="120">
+    </div>
+    <div class="cart-footer">
+      <div class="cart-total">
+        <span>Total</span>
+        <span id="cart-total-price">$0.00</span>
+      </div>
+      <div class="cart-cod-badge">💵 Cash on Delivery</div>
+      <button class="btn btn-primary" id="checkout-btn" style="width:100%">Place Order</button>
+      <button class="btn btn-ghost" onclick="closeCartFn()">Continue Shopping</button>
+    </div>
+  </div>
+
+  <!-- ── In-App Chat Widget ────────────────────────────────── -->
+  <div id="chat-widget" class="chat-widget">
+    <!-- Trigger Button -->
+    <button class="chat-trigger-btn" id="chat-trigger-btn" aria-label="Open chat">
+      <svg id="chat-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <svg id="chat-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+      <span class="chat-unread-badge" id="chat-unread-badge" style="display:none">!</span>
+    </button>
+
+    <!-- Chat Window -->
+    <div class="chat-window" id="chat-window" style="display:none">
+      <div class="chat-window-header">
+        <div class="chat-header-info">
+          <div class="chat-avatar">S</div>
+          <div>
+            <div class="chat-header-name">Solo Support</div>
+            <div class="chat-header-status">We reply quickly!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-name-prompt" id="chat-name-prompt">
+        <p>👋 Hi! What's your name?</p>
+        <div class="chat-name-form">
+          <input type="text" id="chat-name-input" placeholder="Your name..." maxlength="40">
+          <button class="btn btn-primary" id="chat-name-submit">Start Chat</button>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chat-messages" style="display:none"></div>
+
+      <div class="chat-input-row" id="chat-input-row" style="display:none">
+        <input type="text" id="chat-input" placeholder="Type a message..." maxlength="500" autocomplete="off">
+        <button class="chat-send-btn" id="chat-send-btn" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Quick-View Modal ──────────────────────────────── -->
+  <div class="qv-overlay" id="qv-overlay">
+    <div class="qv-modal" id="qv-modal">
+      <button class="qv-close" id="qv-close">✕</button>
+      <div class="qv-content">
+        <div class="qv-image-wrap">
+          <img id="qv-image" src="" alt="">
+        </div>
+        <div class="qv-info">
+          <div class="qv-category" id="qv-category"></div>
+          <h2 id="qv-name"></h2>
+          <p id="qv-desc"></p>
+          <div id="qv-price" class="qv-price"></div>
+          <div class="qv-qty-row">
+            <button class="qty-btn" id="qv-qty-minus">−</button>
+            <span id="qv-qty-val">1</span>
+            <button class="qty-btn" id="qv-qty-plus">+</button>
+          </div>
+          <button class="btn btn-primary qv-add-btn" id="qv-add-btn">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Customer Auth Modal ────────────────────────────── -->
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-modal" id="auth-modal">
+      <button class="auth-close" id="auth-close" aria-label="Close modal">✕</button>
+      
+      <div class="auth-header">
+        <div class="logo">Adouna Amoul Solo.</div>
+        <h2 id="auth-modal-title">Welcome to Solo</h2>
+        <p class="auth-modal-sub" id="auth-modal-sub">Sign in or create an account to proceed</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="auth-tab-login">Sign In</button>
+        <button class="auth-tab" id="auth-tab-register">Create Account</button>
+      </div>
+
+      <!-- Login Form -->
+      <form class="auth-form" id="auth-form-login">
+        <div class="auth-form-group">
+          <label for="auth-login-email">Email Address</label>
+          <input type="email" id="auth-login-email" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <div class="auth-form-group">
+          <label for="auth-login-password">Password</label>
+          <input type="password" id="auth-login-password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div class="auth-error" id="auth-login-error" style="display:none"></div>
+        <button type="submit" class="btn btn-primary auth-submit-btn">Sign In & Continue</button>
+      </form>
+
+      <!-- Register Form -->
+      <form class="auth-form" id="auth-form-register" style="display:none">
+        <div class="auth-form-group">
+          <label for="auth-reg-name">Full Name</label>
+          <input type="text" id="auth-reg-name" placeholder="John Doe" required autocomplete="name">
+        </div>
+        <div class="auth-form-group">
+          <label for="auth-reg-email">Email Address</label>
+          <input type="email" id="auth-reg-email" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <div class="auth-form-group">
+          <label for="auth-reg-password">Create Password (min 6 chars)</label>
+          <input type="password" id="auth-reg-password" placeholder="••••••••" minlength="6" required autocomplete="new-password">
+        </div>
+        <div class="auth-error" id="auth-reg-error" style="display:none"></div>
+        <button type="submit" class="btn btn-primary auth-submit-btn">Create Account & Continue</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="/src/chat.js"></script>
+</body>
+
+</html>

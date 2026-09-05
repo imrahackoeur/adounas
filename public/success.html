@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmed | Solo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #4F46E5;
+      --accent-light: rgba(79,70,229,0.08);
+      --bg: #F7F7FB;
+      --border: #E8E8F0;
+      --text: #12121A;
+      --muted: #6B7280;
+      --green: #16A34A;
+      --green-light: rgba(22,163,74,0.08);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text);
+      min-height:100vh; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; padding:2rem; }
+    .card {
+      background:#fff; border:1px solid var(--border); border-radius:24px;
+      padding:3rem 2.5rem; max-width:520px; width:100%; text-align:center;
+      box-shadow:0 8px 40px rgba(79,70,229,0.08);
+    }
+    .logo {
+      font-size:1.5rem; font-weight:800; letter-spacing:-1px;
+      background:linear-gradient(135deg,#4F46E5,#7C3AED);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      margin-bottom:2rem; display:block;
+    }
+    .success-icon {
+      width:80px; height:80px; border-radius:50%;
+      background:var(--green-light); border:2px solid var(--green);
+      display:flex; align-items:center; justify-content:center;
+      font-size:2.2rem; margin:0 auto 1.5rem;
+    }
+    h1 { font-size:1.9rem; margin-bottom:0.75rem; }
+    .subtitle { color:var(--muted); margin-bottom:2rem; font-size:1rem; line-height:1.6; }
+    .order-box {
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:14px; padding:1.5rem; margin-bottom:2rem; text-align:left;
+    }
+    .order-box h3 { font-size:0.85rem; text-transform:uppercase; letter-spacing:0.06em;
+      color:var(--muted); margin-bottom:1rem; font-weight:700; }
+    .order-row { display:flex; justify-content:space-between; padding:0.5rem 0;
+      border-bottom:1px solid var(--border); font-size:0.95rem; }
+    .order-row:last-child { border-bottom:none; font-weight:800; font-size:1.05rem; }
+    .order-row .label { color:var(--muted); }
+    .loading { color:var(--muted); font-size:0.95rem; padding:1rem 0; }
+    .email-badge {
+      display:inline-block; background:var(--accent-light); color:var(--accent);
+      border:1px solid rgba(79,70,229,0.2); border-radius:999px;
+      padding:0.35rem 1rem; font-size:0.875rem; font-weight:600; margin-bottom:2rem;
+    }
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:0.9rem 2rem; border-radius:999px; font-family:inherit;
+      font-size:1rem; font-weight:700; cursor:pointer; border:none;
+      transition:all 0.25s; text-decoration:none; width:100%;
+    }
+    .btn-primary { background:var(--accent); color:white; margin-bottom:0.75rem; }
+    .btn-primary:hover { background:#4338CA; transform:translateY(-1px); }
+    .btn-ghost { background:transparent; color:var(--muted);
+      border:1.5px solid var(--border); }
+    .btn-ghost:hover { color:var(--accent); border-color:var(--accent); }
+    #error-msg { color:#EF4444; font-size:0.9rem; margin-bottom:1rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <a href="/" class="logo">Solo.</a>
+    <div class="success-icon">🎉</div>
+    <h1>Order Confirmed!</h1>
+    <p class="subtitle">Your payment was successful. We'll get your items shipped out shortly.</p>
+
+    <div id="email-wrap"></div>
+    <p id="error-msg"></p>
+
+    <div class="order-box" id="order-box">
+      <h3>Order Summary</h3>
+      <div class="loading" id="loading">Loading order details…</div>
+      <div id="order-rows"></div>
+    </div>
+
+    <a href="/" class="btn btn-primary">← Continue Shopping</a>
+    <a href="/" class="btn btn-ghost">Back to Store</a>
+  </div>
+
+  <script>
+    (async () => {
+      const params = new URLSearchParams(location.search);
+      const sid = params.get('session_id');
+      const loadingEl  = document.getElementById('loading');
+      const rowsEl     = document.getElementById('order-rows');
+      const errorEl    = document.getElementById('error-msg');
+      const emailWrap  = document.getElementById('email-wrap');
+
+      if (!sid) { loadingEl.textContent = 'No order found.'; return; }
+
+      try {
+        const res  = await fetch(`/api/verify-session?session_id=${sid}`);
+        const data = await res.json();
+
+        if (data.error) throw new Error(data.error);
+
+        loadingEl.style.display = 'none';
+
+        if (data.customer_email) {
+          emailWrap.innerHTML = `<div class="email-badge">📧 Confirmation sent to ${data.customer_email}</div>`;
+        }
+
+        // Line items
+        const rows = (data.items || []).map(item =>
+          `<div class="order-row">
+            <span class="label">${item.description || item.price?.product || 'Item'} ×${item.quantity}</span>
+            <span>$${(item.amount_total / 100).toFixed(2)}</span>
+          </div>`
+        ).join('');
+
+        const total = `<div class="order-row">
+          <span>Total Paid</span>
+          <span>$${(data.amount_total / 100).toFixed(2)} ${(data.currency || 'usd').toUpperCase()}</span>
+        </div>`;
+
+        rowsEl.innerHTML = rows + total;
+
+        // Clear cart from localStorage
+        localStorage.removeItem('solo_cart');
+      } catch (e) {
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Could not load order details. Your payment was still processed.';
+        console.error(e);
+      }
+    })();
+  </script>
+</body>
+</html>

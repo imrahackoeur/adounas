@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solo | Admin Panel</title>
+    <meta name="robots" content="noindex, nofollow">
+  </head>
+  <body>
+
+    <!-- ── Password Gate ─────────────────────────────────── -->
+    <div class="pw-gate" id="pw-gate">
+      <div class="pw-card">
+        <div class="pw-logo">Solo.</div>
+        <div class="pw-icon">🔐</div>
+        <h2>Admin Access</h2>
+        <p>Enter your admin password to continue.</p>
+        <form id="pw-form">
+          <div class="pw-input-wrap">
+            <input id="pw-input" type="password" placeholder="Password" autocomplete="current-password">
+            <button type="button" id="pw-toggle" class="pw-eye">👁</button>
+          </div>
+          <div class="pw-error" id="pw-error"></div>
+          <button type="submit" class="btn btn-primary pw-btn">Unlock</button>
+        </form>
+        <a href="/" class="pw-back">← Back to Store</a>
+      </div>
+    </div>
+
+    <!-- ── Main Admin Content ────────────────────────────── -->
+    <div id="admin-content" style="display:none">
+
+      <!-- Header -->
+      <header class="admin-header">
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <div class="admin-logo">Solo.</div>
+          <span class="admin-badge">Admin</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem">
+          <a href="/" class="back-link">← Back to Store</a>
+          <button class="btn-logout" id="btn-logout">Logout</button>
+        </div>
+      </header>
+
+      <!-- Tab Nav -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="products" id="tab-products">📦 Products</button>
+        <button class="admin-tab" data-tab="messages" id="tab-messages">
+          💬 Messages
+          <span class="admin-msg-badge" id="admin-msg-badge" style="display:none">0</span>
+        </button>
+        <button class="admin-tab" data-tab="orders" id="tab-orders">
+          📝 Orders
+          <span class="admin-msg-badge" id="admin-orders-badge" style="display:none">0</span>
+        </button>
+      </div>
+
+      <!-- Layout -->
+      <main class="admin-layout" id="panel-products">
+
+        <!-- Form Panel -->
+        <aside class="form-panel">
+          <h2><span id="form-title">➕ Add New Product</span></h2>
+
+          <form id="product-form" novalidate>
+            <div class="form-group">
+              <label for="prod-name">Product Name *</label>
+              <input id="prod-name" type="text" placeholder="e.g. Solo Obsidian Backpack" required>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label for="prod-price">Price (USD) *</label>
+                <input id="prod-price" type="number" placeholder="0.00" min="0" step="0.01" required>
+              </div>
+              <div class="form-group">
+                <label for="prod-stock">Stock Quantity</label>
+                <input id="prod-stock" type="number" placeholder="Unlimited" min="0" step="1">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="prod-category">Category</label>
+              <input id="prod-category" type="text" placeholder="e.g. Bags, Watches, Accessories">
+            </div>
+            <div class="form-group">
+              <label for="prod-desc">Description</label>
+              <textarea id="prod-desc" placeholder="Describe the product…"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Product Image</label>
+              <div class="img-preview-container">
+                <img id="img-preview" src="" alt="Preview">
+                <div id="img-placeholder" class="img-placeholder">
+                  <span>🖼️</span><p>Image preview</p>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="prod-image-url">Image URLs (comma separated for gallery)</label>
+              <textarea id="prod-image-url" placeholder="https://image1.jpg, https://image2.jpg..." style="min-height: 60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label>— or upload a primary file —</label>
+              <div class="file-drop-zone" id="drop-zone">
+                <input id="prod-image-file" type="file" accept="image/*">
+                📁 Click to upload from your computer
+              </div>
+            </div>
+            <button type="submit" id="submit-btn" class="btn btn-primary pw-btn">Add Product</button>
+            <button type="button" id="cancel-btn" class="btn btn-ghost pw-btn" style="display:none">Cancel Edit</button>
+          </form>
+        </aside>
+
+        <!-- Product List -->
+        <section class="products-panel">
+          <h2>
+            All Products
+            <span class="product-count" id="product-count">0 products</span>
+          </h2>
+          <div class="admin-product-list" id="admin-product-list"></div>
+        </section>
+
+      </main>
+
+      <!-- Messages Panel -->
+      <section class="admin-messages-panel" id="panel-messages" style="display:none">
+        <div class="admin-chat-list" id="admin-chat-list">
+          <div class="admin-chat-empty">No conversations yet.</div>
+        </div>
+        <div class="admin-chat-thread" id="admin-chat-thread">
+          <div class="admin-chat-placeholder">← Select a conversation</div>
+          <div class="admin-thread-messages" id="admin-thread-messages" style="display:none"></div>
+          <div class="admin-thread-input" id="admin-thread-input" style="display:none">
+            <input type="text" id="admin-reply-input" placeholder="Reply..." maxlength="500" autocomplete="off">
+            <button class="chat-send-btn" id="admin-reply-btn" aria-label="Send reply">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Orders Panel -->
+      <section class="admin-orders-panel" id="panel-orders" style="display:none">
+        <div class="admin-orders-toolbar">
+          <h2>All Orders</h2>
+          <select id="orders-filter" class="orders-filter-select">
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div id="orders-list" class="orders-list"><p style="color:#6B7280;padding:2rem">Loading orders...</p></div>
+      </section>
+
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/admin.js"></script>
+  </body>
+</html>

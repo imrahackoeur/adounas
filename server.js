@@ -292,8 +292,49 @@ function saveOrders(orders) {
   writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
 }
 
+// ── Telegram Order Alert Dispatcher ──────────────────────────────────────────
+async function sendTelegramAlert(order) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+
+  const itemsList = order.items.map(i => `  • ${i.name} × ${i.qty} ($${(i.price * i.qty).toFixed(2)})`).join('\n');
+  const cleanPhone = (order.customer.phone || '').replace(/[^0-9+]/g, '');
+
+  const text = `🛍️ *NEW ORDER RECEIVED!*
+━━━━━━━━━━━━━━━━━━
+🆔 *Order:* \`${order.orderId}\`
+👤 *Customer:* ${order.customer.name || 'Anonymous'}
+📞 *Phone:* ${order.customer.phone || 'N/A'}
+📍 *Address:* ${order.customer.location || 'N/A'}
+✉️ *Email:* ${order.customer.email || 'N/A'}
+💵 *Total:* $${Number(order.total).toFixed(2)} (Cash on Delivery)
+
+📦 *Items Ordered:*
+${itemsList}
+
+━━━━━━━━━━━━━━━━━━
+💬 [WhatsApp Customer](https://wa.me/${cleanPhone.replace('+', '')})
+⚙️ [Open Admin Dashboard](${process.env.CLIENT_URL || 'https://adounas.com'}/admin.html)`;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true
+      })
+    });
+  } catch (err) {
+    console.error('Telegram notification error:', err.message);
+  }
+}
+
 // ── POST /api/orders ───────────────────────────────────────────────────────────
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', async (req, res) => {
   const { customer, items, total } = req.body;
   if (!customer || !items || items.length === 0) {
     return res.status(400).json({ error: 'Invalid order data.' });
@@ -310,20 +351,51 @@ app.post('/api/orders', (req, res) => {
   };
   orders.unshift(order);
   saveOrders(orders);
+
+  // Send instant Telegram alert asynchronously
+  sendTelegramAlert(order).catch(() => {});
+
   res.json({ ok: true, orderId });
 });
 
-// ── GET /api/orders  (admin only) ─────────────────────────────────────────────
+// ── POST /api/admin/test-telegram (admin only) ────────────────────────────────
+app.post('/api/admin/test-telegram', adminAuth, async (req, res) => {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) {
+    return res.status(400).json({ error: 'TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set in Railway variables or .env.' });
+  }
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: '✅ *Adounas Instant Alerts Connected!*\nYou will receive real-time push alerts whenever a customer places an order.',
+        parse_mode: 'Markdown'
+      })
+    });
+    const data = await r.json();
+    if (data.ok) res.json({ ok: true });
+    else res.status(400).json({ error: data.description || 'Failed to send message to Telegram.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// ── GET /api/orders  (admin only - all orders) ───────────────────────────────
 app.get('/api/orders', adminAuth, (_, res) => {
   res.json(loadOrders());
 });
 
-// ── GET /api/orders/:id  (admin only) ─────────────────────────────────────────
-app.get('/api/orders/:id', adminAuth, (req, res) => {
+// ── GET /api/orders/:id  (receipt view by specific ID) ────────────────────────
+app.get('/api/orders/:id', (req, res) => {
   const order = loadOrders().find(o => o.orderId === req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
   res.json(order);
 });
+
 
 // ── PATCH /api/orders/:id  (admin only) ───────────────────────────────────────
 app.patch('/api/orders/:id', adminAuth, (req, res) => {

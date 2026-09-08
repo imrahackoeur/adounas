@@ -375,7 +375,14 @@ function renderOrders() {
     return;
   }
 
-  ordersListEl.innerHTML = orders.map(o => `
+  ordersListEl.innerHTML = orders.map(o => {
+    const rawPhone = (o.customer.phone || '').trim();
+    const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
+    const waMsg = encodeURIComponent(`Hello ${o.customer.name}! This is Adounas store regarding your order #${o.orderId} ($${Number(o.total).toFixed(2)}). Your delivery to ${o.customer.location} is being prepared!`);
+    const waUrl = cleanDigits ? `https://wa.me/${cleanDigits}?text=${waMsg}` : '#';
+    const telUrl = rawPhone ? `tel:${rawPhone}` : '#';
+
+    return `
     <div class="order-card">
       <div class="order-info">
         <div class="order-id-label">Order</div>
@@ -389,6 +396,11 @@ function renderOrders() {
           ${o.items.map(i => `${escO(i.name)} × ${i.qty}`).join(' &nbsp;|&nbsp; ')}
         </div>
         <div class="order-total">$${Number(o.total).toFixed(2)} <small style="font-size:0.75rem;font-weight:600;color:#16A34A">💵 COD</small></div>
+        
+        <div class="order-actions-row">
+          ${cleanDigits ? `<a href="${waUrl}" target="_blank" rel="noopener" class="btn-wa">💬 WhatsApp Customer</a>` : ''}
+          ${rawPhone ? `<a href="${telUrl}" class="btn-call">📞 Call</a>` : ''}
+        </div>
       </div>
       <div class="order-status-col">
         <span class="order-status-badge status-${o.status}">${STATUS_LABELS[o.status] || o.status}</span>
@@ -399,7 +411,8 @@ function renderOrders() {
           <option value="cancelled" ${o.status==='cancelled' ? 'selected':''}>Cancelled</option>
         </select>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function loadOrders() {
@@ -428,12 +441,36 @@ window.updateOrderStatus = async (orderId, status) => {
 
 ordersFilterEl.addEventListener('change', renderOrders);
 
+// Test Telegram Alert
+const btnTgTest = document.getElementById('btn-tg-test');
+if (btnTgTest) {
+  btnTgTest.addEventListener('click', async () => {
+    btnTgTest.disabled = true;
+    btnTgTest.textContent = 'Sending test…';
+    try {
+      const res = await adminFetch('/api/admin/test-telegram', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        showToast('📱 Test alert sent to your Telegram!');
+      } else {
+        alert(data.error || 'Could not send Telegram test. Please make sure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are set.');
+      }
+    } catch (e) {
+      alert('⚠️ Error testing Telegram connection.');
+    } finally {
+      btnTgTest.disabled = false;
+      btnTgTest.textContent = 'Test Telegram Alert';
+    }
+  });
+}
+
 // Periodically check for new orders when on Orders tab
 setInterval(async () => {
   if (tabOrders.classList.contains('active') && getAdminToken()) {
     await loadOrders();
   }
 }, 10000);
+
 
 // ── Admin Chat ────────────────────────────────────────────────────────────────
 const chatListEl       = document.getElementById('admin-chat-list');

@@ -140,6 +140,19 @@
 
       <!-- Orders Panel -->
       <section class="admin-orders-panel" id="panel-orders" style="display:none">
+        
+        <!-- Telegram Alerts Banner -->
+        <div class="telegram-banner">
+          <div class="telegram-banner-left">
+            <span class="telegram-banner-icon">📱</span>
+            <div>
+              <div class="telegram-banner-title">Instant Push Alerts via Telegram</div>
+              <div class="telegram-banner-desc">Get notified with sound on your phone the moment a customer places an order.</div>
+            </div>
+          </div>
+          <button type="button" class="btn-tg-test" id="btn-tg-test">Test Telegram Alert</button>
+        </div>
+
         <div class="admin-orders-toolbar">
           <h2>All Orders</h2>
           <select id="orders-filter" class="orders-filter-select">
@@ -152,6 +165,7 @@
         </div>
         <div id="orders-list" class="orders-list"><p style="color:#6B7280;padding:2rem">Loading orders...</p></div>
       </section>
+
 
     </div>
 

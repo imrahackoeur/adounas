@@ -8,17 +8,16 @@
     "dev:ui": "vite",
     "server": "node server.js",
     "build": "vite build",
+    "postinstall": "vite build",
     "start": "node server.js",
     "preview": "vite preview"
-  },
-  "devDependencies": {
-    "vite": "^8.2.0"
   },
   "dependencies": {
     "concurrently": "^10.0.4",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "stripe": "^22.5.0"
+    "stripe": "^22.5.0",
+    "vite": "^8.2.0"
   }
 }

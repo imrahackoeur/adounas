@@ -277,6 +277,11 @@ app.patch('/api/orders/:id', (req, res) => {
   res.json({ ok: true, order });
 });
 
+// ── Health Check ──────────────────────────────────────────────────────────────
+app.get('/api/health', (_, res) => {
+  res.json({ ok: true, status: 'healthy', time: new Date().toISOString() });
+});
+
 // ── Serve Static Assets in Production ─────────────────────────────────────────
 const distPath = path.join(__dirname, 'dist');
 if (existsSync(distPath)) {
@@ -288,11 +293,18 @@ if (existsSync(distPath)) {
     }
     next();
   });
+} else {
+  app.get('/', (_, res) => {
+    res.send('<h1>Adounas Server is Running</h1><p>Building frontend...</p>');
+  });
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n✅  Adounas Server running  →  http://localhost:${PORT}`);
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`\n✅  Adounas Server running  →  http://${HOST}:${PORT}`);
+  console.log(`   Dist static files: ${existsSync(distPath) ? '✅ Loaded' : '⚠️ Not found'}`);
   console.log(`   Mode: ${process.env.NODE_ENV || 'development'}\n`);
 });
+
 

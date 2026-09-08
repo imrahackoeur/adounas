@@ -162,6 +162,67 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Admin Authentication ──────────────────────────────────────────────────────
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'solo2026';
+const adminSessions  = new Set();
+
+function adminAuth(req, res, next) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token || !adminSessions.has(token)) {
+    return res.status(401).json({ error: 'Unauthorized: Admin authentication required.' });
+  }
+  next();
+}
+
+// POST /api/admin/login
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (!password || password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Incorrect admin password.' });
+  }
+  const token = 'adm_' + genToken();
+  adminSessions.add(token);
+  res.json({ ok: true, token });
+});
+
+// GET /api/admin/verify
+app.get('/api/admin/verify', (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (token && adminSessions.has(token)) {
+    return res.json({ ok: true });
+  }
+  res.status(401).json({ error: 'Invalid or expired admin session.' });
+});
+
+// POST /api/admin/logout
+app.post('/api/admin/logout', (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  adminSessions.delete(token);
+  res.json({ ok: true });
+});
+
+// ── GET /api/geocode (GPS address lookup) ──────────────────────────────────────
+app.get('/api/geocode', async (req, res) => {
+  const { lat, lon } = req.query;
+  if (!lat || !lon) return res.status(400).json({ error: 'Missing lat or lon' });
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
+      headers: { 'User-Agent': 'Adounas-Ecommerce/1.0 (contact@adounas.com)' }
+    });
+    const data = await r.json();
+    const a = data.address || {};
+    const parts = [
+      a.road || a.neighbourhood || a.suburb,
+      a.city || a.town || a.village || a.state,
+      a.country
+    ].filter(Boolean);
+    const address = parts.length > 0 ? parts.join(', ') : (data.display_name || `GPS (${lat}, ${lon})`);
+    res.json({ ok: true, address, lat, lon });
+  } catch (err) {
+    res.json({ ok: true, address: `GPS (${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)})`, lat, lon });
+  }
+});
+
 // ── Chat Store ─────────────────────────────────────────────────────────────────
 const CHATS_FILE = path.join(__dirname, 'chats.json');
 function loadChats() { return loadJson(CHATS_FILE, {}); }
@@ -195,10 +256,9 @@ app.get('/api/chat/sync', (req, res) => {
   res.json({ messages: chat.messages });
 });
 
-// ── GET /api/chat/all  (admin) ────────────────────────────────────────────────
-app.get('/api/chat/all', (_, res) => {
+// ── GET /api/chat/all  (admin only) ───────────────────────────────────────────
+app.get('/api/chat/all', adminAuth, (_, res) => {
   const chats = loadChats();
-  // Return summaries for the list (no messages body)
   const list = Object.values(chats).map(c => ({
     chatId:    c.chatId,
     name:      c.name,
@@ -209,14 +269,13 @@ app.get('/api/chat/all', (_, res) => {
   res.json(list);
 });
 
-// ── GET /api/chat/thread  (admin) ─────────────────────────────────────────────
-app.get('/api/chat/thread', (req, res) => {
+// ── GET /api/chat/thread  (admin only) ────────────────────────────────────────
+app.get('/api/chat/thread', adminAuth, (req, res) => {
   const { chatId } = req.query;
   if (!chatId) return res.status(400).json({ error: 'Missing chatId' });
   const chats = loadChats();
   const chat = chats[chatId];
   if (!chat) return res.status(404).json({ error: 'Chat not found' });
-  // Mark as read
   chat.unread = 0;
   saveChats(chats);
   res.json(chat);
@@ -254,20 +313,20 @@ app.post('/api/orders', (req, res) => {
   res.json({ ok: true, orderId });
 });
 
-// ── GET /api/orders  (admin) ───────────────────────────────────────────────────
-app.get('/api/orders', (_, res) => {
+// ── GET /api/orders  (admin only) ─────────────────────────────────────────────
+app.get('/api/orders', adminAuth, (_, res) => {
   res.json(loadOrders());
 });
 
-// ── GET /api/orders/:id ────────────────────────────────────────────────────────
-app.get('/api/orders/:id', (req, res) => {
+// ── GET /api/orders/:id  (admin only) ─────────────────────────────────────────
+app.get('/api/orders/:id', adminAuth, (req, res) => {
   const order = loadOrders().find(o => o.orderId === req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
   res.json(order);
 });
 
-// ── PATCH /api/orders/:id  (admin update status) ──────────────────────────────
-app.patch('/api/orders/:id', (req, res) => {
+// ── PATCH /api/orders/:id  (admin only) ───────────────────────────────────────
+app.patch('/api/orders/:id', adminAuth, (req, res) => {
   const { status } = req.body;
   const orders = loadOrders();
   const order = orders.find(o => o.orderId === req.params.id);
@@ -276,6 +335,7 @@ app.patch('/api/orders/:id', (req, res) => {
   saveOrders(orders);
   res.json({ ok: true, order });
 });
+
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (_, res) => {

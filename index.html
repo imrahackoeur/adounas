@@ -20,7 +20,6 @@
       <a href="#products" class="nav-link">Shop All</a>
       <a href="#" class="nav-link">New Arrivals</a>
       <a href="#" class="nav-link">About</a>
-      <a href="/admin.html" class="nav-link nav-admin">⚙ Admin</a>
     </div>
 
     <div class="nav-right">
@@ -72,7 +71,6 @@
     <a href="#products" class="mobile-nav-link" id="mob-shop">Shop All</a>
     <a href="#" class="mobile-nav-link">New Arrivals</a>
     <a href="#" class="mobile-nav-link">About</a>
-    <a href="/admin.html" class="mobile-nav-link" style="color:var(--accent)">⚙ Admin</a>
   </div>
 
   <!-- ── Search Bar ────────────────────────────────────── -->
@@ -148,7 +146,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; 2026 Solo Essentials. All rights reserved.</p>
+      <p>&copy; 2026 Adounas. All rights reserved. &nbsp;·&nbsp; <a href="/admin.html" style="color:var(--text-light);text-decoration:none;font-size:0.8rem">Staff Login</a></p>
     </div>
   </footer>
 
@@ -164,7 +162,16 @@
       <div class="cart-delivery-title">📦 Delivery Details</div>
       <input type="text"  id="delivery-name"     placeholder="Your full name *"         maxlength="60">
       <input type="tel"   id="delivery-phone"    placeholder="Phone number *"            maxlength="20">
-      <input type="text"  id="delivery-location" placeholder="City / Neighborhood *"    maxlength="120">
+      <div class="delivery-location-row">
+        <input type="text"  id="delivery-location" placeholder="City / Neighborhood / Address *" maxlength="140">
+        <button type="button" class="btn-gps" id="btn-gps" title="Use My Current Location">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+            <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+          </svg>
+          <span id="btn-gps-text">GPS</span>
+        </button>
+      </div>
+      <div class="gps-status" id="gps-status" style="display:none"></div>
     </div>
     <div class="cart-footer">
       <div class="cart-total">

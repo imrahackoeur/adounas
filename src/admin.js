@@ -1,8 +1,7 @@
 import './admin.css';
 
-// ── Password Gate ─────────────────────────────────────────────────────────────
-const ADMIN_PASSWORD = 'solo2026';   // ← change this to your preferred password
-const SESSION_KEY    = 'solo_admin_auth';
+// ── Secure Server-Side Admin Authentication ──────────────────────────────────
+const TOKEN_KEY = 'solo_admin_token';
 
 const pwGate      = document.getElementById('pw-gate');
 const adminContent= document.getElementById('admin-content');
@@ -12,16 +11,58 @@ const pwError     = document.getElementById('pw-error');
 const pwToggle    = document.getElementById('pw-toggle');
 const btnLogout   = document.getElementById('btn-logout');
 
-function unlock() {
-  pwGate.style.display = 'none';
-  adminContent.style.display = 'block';
-  sessionStorage.setItem(SESSION_KEY, '1');
+function getAdminToken() {
+  return sessionStorage.getItem(TOKEN_KEY) || '';
 }
 
-// Auto-unlock if already authenticated this session
-if (sessionStorage.getItem(SESSION_KEY) === '1') {
-  unlock();
+async function adminFetch(url, options = {}) {
+  const token = getAdminToken();
+  const headers = {
+    ...options.headers,
+    'Authorization': `Bearer ${token}`,
+  };
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    lock();
+    pwError.textContent = '🔒 Session expired. Please log in again.';
+    throw new Error('Unauthorized');
+  }
+  return res;
 }
+
+function unlock(token) {
+  if (token) sessionStorage.setItem(TOKEN_KEY, token);
+  pwGate.style.display = 'none';
+  adminContent.style.display = 'block';
+}
+
+function lock() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  pwGate.style.display = 'flex';
+  adminContent.style.display = 'none';
+  pwInput.value = '';
+}
+
+// Check saved token with backend on page load
+(async function checkExistingAuth() {
+  const token = getAdminToken();
+  if (token) {
+    try {
+      const res = await fetch('/api/admin/verify', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        unlock();
+      } else {
+        lock();
+      }
+    } catch {
+      lock();
+    }
+  } else {
+    lock();
+  }
+})();
 
 // Toggle password visibility
 pwToggle.addEventListener('click', () => {
@@ -29,18 +70,42 @@ pwToggle.addEventListener('click', () => {
   pwToggle.textContent = pwInput.type === 'password' ? '👁' : '🙈';
 });
 
-// Submit password
-pwForm.addEventListener('submit', e => {
+// Submit password to backend
+pwForm.addEventListener('submit', async e => {
   e.preventDefault();
-  if (pwInput.value === ADMIN_PASSWORD) {
-    pwError.textContent = '';
-    unlock();
-  } else {
-    pwError.textContent = '❌ Incorrect password. Try again.';
-    pwInput.value = '';
-    pwInput.focus();
-    pwInput.closest('.pw-input-wrap').style.animation = 'shake 0.35s ease';
-    setTimeout(() => pwInput.closest('.pw-input-wrap').style.animation = '', 400);
+  const password = pwInput.value.trim();
+  if (!password) return;
+
+  const submitBtn = pwForm.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Verifying...';
+
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+
+    if (res.ok && data.ok) {
+      pwError.textContent = '';
+      unlock(data.token);
+      // Load initial data
+      if (tabOrders.classList.contains('active')) loadOrders();
+      if (tabMessages.classList.contains('active')) loadChatList();
+    } else {
+      pwError.textContent = '❌ ' + (data.error || 'Incorrect password.');
+      pwInput.value = '';
+      pwInput.focus();
+      pwInput.closest('.pw-input-wrap').style.animation = 'shake 0.35s ease';
+      setTimeout(() => pwInput.closest('.pw-input-wrap').style.animation = '', 400);
+    }
+  } catch(err) {
+    pwError.textContent = '⚠️ Could not connect to authentication server.';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Unlock';
   }
 });
 
@@ -52,9 +117,14 @@ style.textContent = `@keyframes shake {
 document.head.appendChild(style);
 
 // Logout
-btnLogout.addEventListener('click', () => {
-  sessionStorage.removeItem(SESSION_KEY);
-  location.reload();
+btnLogout.addEventListener('click', async () => {
+  try {
+    await fetch('/api/admin/logout', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${getAdminToken()}` }
+    });
+  } catch {}
+  lock();
 });
 
 // ── Store Helpers ─────────────────────────────────────────────────────────────
@@ -334,17 +404,17 @@ function renderOrders() {
 
 async function loadOrders() {
   try {
-    const res = await fetch('/api/orders');
+    const res = await adminFetch('/api/orders');
     allOrders = await res.json();
     renderOrders();
   } catch(e) {
-    ordersListEl.innerHTML = `<p style="color:var(--danger);padding:2rem">⚠️ Could not load orders. Make sure the API server is running.</p>`;
+    ordersListEl.innerHTML = `<p style="color:var(--danger);padding:2rem">⚠️ Could not load orders. Make sure you are logged in.</p>`;
   }
 }
 
 window.updateOrderStatus = async (orderId, status) => {
   try {
-    await fetch(`/api/orders/${orderId}`, {
+    await adminFetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -360,7 +430,7 @@ ordersFilterEl.addEventListener('change', renderOrders);
 
 // Periodically check for new orders when on Orders tab
 setInterval(async () => {
-  if (tabOrders.classList.contains('active')) {
+  if (tabOrders.classList.contains('active') && getAdminToken()) {
     await loadOrders();
   }
 }, 10000);
@@ -386,7 +456,7 @@ function fmtTime(ts) {
 
 async function loadChatList() {
   try {
-    const res   = await fetch('/api/chat/all');
+    const res   = await adminFetch('/api/chat/all');
     const chats = await res.json();
 
     // Badge count
@@ -420,21 +490,18 @@ async function loadChatList() {
 
 async function openThread(chatId) {
   activeChatId = chatId;
-  // Update active state in list
   chatListEl.querySelectorAll('.admin-chat-item').forEach(el => {
     el.classList.toggle('active', el.dataset.id === chatId);
   });
 
   try {
-    const res  = await fetch(`/api/chat/thread?chatId=${chatId}`);
+    const res  = await adminFetch(`/api/chat/thread?chatId=${chatId}`);
     const chat = await res.json();
 
-    // Show thread area
     chatThreadEl.querySelector('.admin-chat-placeholder') && (chatThreadEl.querySelector('.admin-chat-placeholder').style.display = 'none');
     threadMsgsEl.style.display  = 'flex';
     threadInputEl.style.display = 'flex';
 
-    // Inject header
     let header = chatThreadEl.querySelector('.admin-thread-header');
     if (!header) {
       header = document.createElement('div');
@@ -443,11 +510,8 @@ async function openThread(chatId) {
     }
     header.textContent = `💬 ${chat.name}`;
 
-    // Render messages
     renderThreadMessages(chat.messages);
     replyInput.focus();
-
-    // Clear badge for this chat in list
     loadChatList();
   } catch(e) { console.warn('Thread error:', e); }
 }
@@ -468,13 +532,12 @@ async function sendAdminReply() {
   if (!text || !activeChatId) return;
   replyInput.value = '';
   try {
-    await fetch('/api/chat/send', {
+    await adminFetch('/api/chat/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chatId: activeChatId, sender: 'admin', text }),
     });
-    // Reload thread
-    const res  = await fetch(`/api/chat/thread?chatId=${activeChatId}`);
+    const res  = await adminFetch(`/api/chat/thread?chatId=${activeChatId}`);
     const chat = await res.json();
     renderThreadMessages(chat.messages);
   } catch(e) { console.warn('Reply error:', e); }
@@ -486,16 +549,18 @@ replyInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendAdminRe
 function startChatPolling() {
   if (chatPollTimer) return;
   chatPollTimer = setInterval(async () => {
+    if (!getAdminToken()) return;
     await loadChatList();
     if (activeChatId) {
       try {
-        const res  = await fetch(`/api/chat/sync?chatId=${activeChatId}`);
+        const res  = await adminFetch(`/api/chat/sync?chatId=${activeChatId}`);
         const data = await res.json();
         renderThreadMessages(data.messages || []);
       } catch(e) {}
     }
   }, 4000);
 }
+
 
 function stopChatPolling() {
   clearInterval(chatPollTimer);

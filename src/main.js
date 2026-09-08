@@ -469,6 +469,70 @@ if (navbar) {
   }, { passive: true });
 }
 
+// ── GPS Geolocation Helper ───────────────────────────────────────────────────
+function initGPSLocation() {
+  const btnGps = document.getElementById('btn-gps');
+  const locInput = document.getElementById('delivery-location');
+  const gpsStatus = document.getElementById('gps-status');
+  const gpsText = document.getElementById('btn-gps-text');
+  if (!btnGps || !locInput) return;
+
+  btnGps.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      if (gpsStatus) {
+        gpsStatus.style.display = 'block';
+        gpsStatus.className = 'gps-status error';
+        gpsStatus.textContent = '❌ Geolocation is not supported by your browser.';
+      }
+      return;
+    }
+
+    btnGps.classList.add('loading');
+    if (gpsText) gpsText.textContent = 'Locating…';
+    if (gpsStatus) {
+      gpsStatus.style.display = 'block';
+      gpsStatus.className = 'gps-status';
+      gpsStatus.textContent = '📡 Detecting your current location…';
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const res = await fetch(`/api/geocode?lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          if (data && data.address) {
+            locInput.value = data.address;
+            if (gpsStatus) {
+              gpsStatus.className = 'gps-status';
+              gpsStatus.textContent = '✅ Location detected successfully!';
+              setTimeout(() => { if (gpsStatus) gpsStatus.style.display = 'none'; }, 3500);
+            }
+          }
+        } catch {
+          locInput.value = `GPS (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+          if (gpsStatus) {
+            gpsStatus.textContent = '✅ GPS coordinates captured.';
+          }
+        } finally {
+          btnGps.classList.remove('loading');
+          if (gpsText) gpsText.textContent = 'GPS';
+        }
+      },
+      () => {
+        btnGps.classList.remove('loading');
+        if (gpsText) gpsText.textContent = 'GPS';
+        if (gpsStatus) {
+          gpsStatus.style.display = 'block';
+          gpsStatus.className = 'gps-status error';
+          gpsStatus.textContent = '⚠️ Location permission denied or unavailable.';
+        }
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.has('search') && searchInput) {
@@ -482,3 +546,4 @@ buildFilterTabs();
 renderProducts();
 updateCartUI();
 initAuth();
+initGPSLocation();

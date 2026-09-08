@@ -520,6 +520,48 @@ h1,h2,h3 { font-weight: 800; line-height: 1.2; }
 .cart-delivery-form input:focus { border-color: var(--accent); }
 .cart-delivery-form input::placeholder { color: var(--text-light); }
 
+.delivery-location-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.delivery-location-row input {
+  flex: 1;
+}
+.btn-gps {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--accent-light, #EEF2FF);
+  color: var(--accent, #4F46E5);
+  border: 1.5px solid rgba(79, 70, 229, 0.2);
+  border-radius: 10px;
+  padding: 0 0.75rem;
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.btn-gps:hover {
+  background: var(--accent, #4F46E5);
+  color: #fff;
+}
+.btn-gps.loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+.gps-status {
+  font-size: 0.75rem;
+  color: var(--accent, #4F46E5);
+  margin-top: -0.25rem;
+  margin-bottom: 0.25rem;
+}
+.gps-status.error {
+  color: var(--danger, #DC2626);
+}
+
 .cart-cod-badge {
   background: rgba(22,163,74,0.1);
   color: #16A34A;
@@ -530,6 +572,7 @@ h1,h2,h3 { font-weight: 800; line-height: 1.2; }
   border-radius: 8px;
   border: 1px solid rgba(22,163,74,0.2);
 }
+
 
 /* ── Quick-View Modal ──────────────────────────────────────── */
 .qv-overlay {

@@ -281,10 +281,12 @@ app.patch('/api/orders/:id', (req, res) => {
 const distPath = path.join(__dirname, 'dist');
 if (existsSync(distPath)) {
   app.use(express.static(distPath));
-  // Serve HTML files without .html extension or direct fallbacks if needed
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/')) return next();
-    res.sendFile(path.join(distPath, 'index.html'));
+  // Fallback for client-side routing in Express 5
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api/')) {
+      return res.sendFile(path.join(distPath, 'index.html'));
+    }
+    next();
   });
 }
 

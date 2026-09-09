@@ -1,5 +1,6 @@
 import './style.css';
 import './product.css';
+import './adaptive.js';
 
 function formatFCFA(amount) {
   const num = Math.round(Number(amount) || 0);
@@ -223,6 +224,216 @@ if (!product) {
   loadingEl.style.display = 'none';
   contentEl.style.display = 'grid';
 }
+
+// ── Cart Sidebar & Badge Management for PDP ──────────────────────────────────
+const cartSidebar   = document.getElementById('cart-sidebar');
+const overlay       = document.getElementById('overlay');
+const cartIconEl    = document.getElementById('cart-icon');
+const closeCartBtn  = document.getElementById('close-cart');
+const cartCountEl   = document.getElementById('cart-count');
+const cartItemsEl   = document.getElementById('cart-items');
+const cartTotalEl   = document.getElementById('cart-total-price');
+const cartQtyLabel  = document.getElementById('cart-qty-label');
+const checkoutBtn   = document.getElementById('checkout-btn');
+
+function getCart() {
+  try {
+    return JSON.parse(localStorage.getItem('solo_cart') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveCart(cart) {
+  localStorage.setItem('solo_cart', JSON.stringify(cart));
+  updatePDPcartUI();
+}
+
+function openCart() {
+  if (cartSidebar) cartSidebar.classList.add('open');
+  if (overlay) overlay.classList.add('visible');
+}
+
+function closeCart() {
+  if (cartSidebar) cartSidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('visible');
+}
+
+window.openCartFn = openCart;
+window.closeCartFn = closeCart;
+
+function updatePDPcartUI() {
+  const cart = getCart();
+  const totalCount = cart.reduce((s, i) => s + (i.qty || 1), 0);
+  
+  if (cartCountEl) {
+    cartCountEl.textContent = totalCount;
+    cartCountEl.classList.toggle('visible', totalCount > 0);
+  }
+  if (cartQtyLabel) {
+    cartQtyLabel.textContent = `${totalCount} article${totalCount > 1 ? 's' : ''}`;
+  }
+
+  if (!cartItemsEl) return;
+
+  if (cart.length === 0) {
+    cartItemsEl.innerHTML = `
+      <div class="empty-cart">
+        <div class="empty-icon">🛍️</div>
+        <p>Votre panier est vide</p>
+      </div>`;
+    if (cartTotalEl) cartTotalEl.textContent = formatFCFA(0);
+    return;
+  }
+
+  let totalAmount = 0;
+  cartItemsEl.innerHTML = cart.map((item, index) => {
+    const itemTotal = Number(item.price || 0) * (item.qty || 1);
+    totalAmount += itemTotal;
+    return `
+      <div class="cart-item">
+        <img src="${item.image || 'https://placehold.co/100x100'}" alt="${item.name || 'Produit'}">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.name || 'Produit'}</div>
+          <div class="cart-item-price">${formatFCFA(item.price || 0)}</div>
+          <div class="cart-qty-stepper">
+            <button type="button" class="stepper-btn pdp-cart-dec" data-idx="${index}">−</button>
+            <span>${item.qty || 1}</span>
+            <button type="button" class="stepper-btn pdp-cart-inc" data-idx="${index}">+</button>
+          </div>
+        </div>
+        <button type="button" class="cart-item-remove pdp-cart-remove" data-idx="${index}" aria-label="Supprimer">
+          <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  if (cartTotalEl) {
+    cartTotalEl.textContent = formatFCFA(totalAmount);
+  }
+
+  cartItemsEl.querySelectorAll('.pdp-cart-dec').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const currentCart = getCart();
+      if (currentCart[idx]) {
+        if (currentCart[idx].qty > 1) {
+          currentCart[idx].qty--;
+        } else {
+          currentCart.splice(idx, 1);
+        }
+        saveCart(currentCart);
+      }
+    });
+  });
+
+  cartItemsEl.querySelectorAll('.pdp-cart-inc').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const currentCart = getCart();
+      if (currentCart[idx]) {
+        currentCart[idx].qty = (currentCart[idx].qty || 1) + 1;
+        saveCart(currentCart);
+      }
+    });
+  });
+
+  cartItemsEl.querySelectorAll('.pdp-cart-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const currentCart = getCart();
+      if (currentCart[idx]) {
+        currentCart.splice(idx, 1);
+        saveCart(currentCart);
+      }
+    });
+  });
+}
+
+window.updateCartUI = updatePDPcartUI;
+
+if (cartIconEl) cartIconEl.addEventListener('click', openCart);
+if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
+if (overlay) overlay.addEventListener('click', closeCart);
+
+// Checkout handler on PDP
+if (checkoutBtn) {
+  checkoutBtn.addEventListener('click', async () => {
+    const cart = getCart();
+    if (cart.length === 0) {
+      alert('Votre panier est vide.');
+      return;
+    }
+
+    const locInput   = document.getElementById('delivery-location');
+    const phoneInput = document.getElementById('delivery-phone');
+    const nameInput  = document.getElementById('delivery-name');
+
+    const location = locInput   ? locInput.value.trim()   : '';
+    const phone    = phoneInput ? phoneInput.value.trim()  : '';
+    const custName = nameInput  ? nameInput.value.trim()   : '';
+
+    if (!custName) {
+      alert('Veuillez entrer votre nom complet.');
+      if (nameInput) nameInput.focus();
+      return;
+    }
+    if (!phone) {
+      alert('Veuillez entrer votre numéro de téléphone (WhatsApp).');
+      if (phoneInput) phoneInput.focus();
+      return;
+    }
+    if (!location) {
+      alert('Veuillez entrer votre adresse de livraison.');
+      if (locInput) locInput.focus();
+      return;
+    }
+
+    const origText = checkoutBtn.textContent;
+    checkoutBtn.disabled = true;
+    checkoutBtn.textContent = '⏳ Envoi de la commande…';
+
+    const items = cart.map(c => ({
+      id: c.id,
+      name: c.name,
+      price: c.price,
+      qty: c.qty || 1,
+      image: c.image || ''
+    }));
+    const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer: { name: custName, phone, location },
+          items,
+          total
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        localStorage.removeItem('solo_cart');
+        updatePDPcartUI();
+        closeCart();
+        alert(`🎉 Merci ${custName} ! Votre commande #${data.order.id} a été confirmée. Nous vous contacterons sur WhatsApp.`);
+      } else {
+        throw new Error(data.error || 'Erreur lors de la commande');
+      }
+    } catch (err) {
+      alert(`⚠️ Erreur: ${err.message || 'Impossible de valider la commande'}`);
+    } finally {
+      checkoutBtn.disabled = false;
+      checkoutBtn.textContent = origText;
+    }
+  });
+}
+
+// Initial badge update
+updatePDPcartUI();
 
 // ── GPS Geolocation Helper ───────────────────────────────────────────────────
 const btnGps = document.getElementById('btn-gps');

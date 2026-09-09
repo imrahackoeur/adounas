@@ -417,16 +417,18 @@ h1,h2,h3 { font-weight: 800; line-height: 1.2; word-break: break-word; }
 .overlay.visible { opacity: 1; pointer-events: all; }
 
 .cart-sidebar {
-  position: fixed; top: 0; right: -480px;
-  width: 480px; height: 100vh;
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: 460px; max-width: 100vw; height: 100vh; height: 100dvh;
   background: var(--bg-2);
   border-left: 1px solid var(--border);
   z-index: 2000;
   display: flex; flex-direction: column;
-  transition: right 0.4s cubic-bezier(0.77,0,0.175,1);
-  box-shadow: -8px 0 40px rgba(0,0,0,0.08);
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -8px 0 40px rgba(0,0,0,0.12);
+  box-sizing: border-box;
 }
-.cart-sidebar.open { right: 0; }
+.cart-sidebar.open { transform: translateX(0) !important; }
 
 .cart-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -686,7 +688,6 @@ h1,h2,h3 { font-weight: 800; line-height: 1.2; word-break: break-word; }
   .hamburger { display: flex; }
   .hero h1 { letter-spacing: -1px; }
   .hero-stats { gap: 1rem; }
-  .cart-sidebar { width: 100%; right: -100%; }
   .qv-content { grid-template-columns: 1fr; }
   .qv-image-wrap img { min-height: 240px; }
   .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
@@ -1370,10 +1371,17 @@ h1,h2,h3 { font-weight: 800; line-height: 1.2; word-break: break-word; }
     top: auto !important;
     width: 100% !important;
     max-width: 100vw !important;
-    border-radius: 20px 20px 0 0 !important;
+    border-radius: 24px 24px 0 0 !important;
+    border-top: 1px solid var(--border) !important;
+    border-left: none !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     padding: 1.25rem 1rem calc(1.25rem + var(--safe-bottom)) !important;
     max-height: 88vh !important;
     box-sizing: border-box !important;
+  }
+  .cart-sidebar.open {
+    transform: translateY(0) !important;
   }
   .cart-items {
     max-height: 40vh;

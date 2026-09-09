@@ -218,28 +218,28 @@
 
               <!-- Card 3: Pricing & Margin Calculator -->
               <div class="shopify-card">
-                <h3>Pricing</h3>
+                <h3>Pricing (FCFA)</h3>
                 <div class="grid-3-col">
                   <div class="form-group">
-                    <label for="sp-price">Price (USD) *</label>
+                    <label for="sp-price">Price (FCFA) *</label>
                     <div class="input-prefix-wrap">
-                      <span class="input-prefix">$</span>
-                      <input id="sp-price" type="number" step="0.01" min="0" placeholder="0.00" required>
+                      <span class="input-prefix">F</span>
+                      <input id="sp-price" type="number" step="100" min="0" placeholder="25000" required>
                     </div>
                   </div>
                   <div class="form-group">
-                    <label for="sp-compare-price">Compare-at price</label>
+                    <label for="sp-compare-price">Compare-at price (FCFA)</label>
                     <div class="input-prefix-wrap">
-                      <span class="input-prefix">$</span>
-                      <input id="sp-compare-price" type="number" step="0.01" min="0" placeholder="0.00">
+                      <span class="input-prefix">F</span>
+                      <input id="sp-compare-price" type="number" step="100" min="0" placeholder="35000">
                     </div>
                     <small class="field-hint">Original strikethrough price</small>
                   </div>
                   <div class="form-group">
-                    <label for="sp-cost">Cost per item</label>
+                    <label for="sp-cost">Cost per item (FCFA)</label>
                     <div class="input-prefix-wrap">
-                      <span class="input-prefix">$</span>
-                      <input id="sp-cost" type="number" step="0.01" min="0" placeholder="0.00">
+                      <span class="input-prefix">F</span>
+                      <input id="sp-cost" type="number" step="100" min="0" placeholder="15000">
                     </div>
                     <small class="field-hint">Customers won't see this</small>
                   </div>
@@ -249,7 +249,7 @@
                 <div class="pricing-metrics-bar" id="pricing-metrics">
                   <div class="metric-box">
                     <span class="metric-label">Profit</span>
-                    <span class="metric-val" id="metric-profit">$0.00</span>
+                    <span class="metric-val" id="metric-profit">0 FCFA</span>
                   </div>
                   <div class="metric-box">
                     <span class="metric-label">Margin</span>
@@ -317,7 +317,7 @@
                         <thead>
                           <tr>
                             <th>Variant</th>
-                            <th style="width: 130px;">Price ($)</th>
+                            <th style="width: 140px;">Price (FCFA)</th>
                             <th style="width: 120px;">Quantity</th>
                             <th style="width: 160px;">SKU</th>
                           </tr>

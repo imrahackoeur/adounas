@@ -1,20 +1,43 @@
 import './style.css'
 import { initAuth, getCurrentUser, openAuthModal, updateAuthUI } from './auth.js'
 
-// ── Seed Products ─────────────────────────────────────────────────────────────
+// ── Currency Formatter (Senegal / FCFA) ──────────────────────────────────────
+export function formatFCFA(amount) {
+  const num = Math.round(Number(amount) || 0);
+  return `${num.toLocaleString('fr-FR')} FCFA`;
+}
+
+// ── Seed Products (FCFA) ──────────────────────────────────────────────────────
 const SEED_PRODUCTS = [
-  { id: 1, name: 'Solo Obsidian Backpack', price: 185.00, category: 'Bags',
-    desc: 'Premium matte leather backpack designed for minimalists. Weather-resistant and perfectly sized for everyday carry.',
-    image: '/bag.png' },
-  { id: 2, name: 'Solo Chronos Watch', price: 245.00, category: 'Accessories',
-    desc: 'Sleek dark aesthetics meet precision engineering. A minimalist timepiece with a stealth black finish.',
-    image: '/watch.png' }
+  { id: 1, name: 'Solo Obsidian Backpack', price: 35000, comparePrice: 45000, category: 'Bags',
+    desc: 'Sac à dos en cuir mat haut de gamme conçu pour les minimalistes. Résistant aux intempéries et idéal pour un usage quotidien.',
+    image: '/bag.png', stock: 25, status: 'active', vendor: 'Solo Dakar' },
+  { id: 2, name: 'Solo Chronos Watch', price: 55000, comparePrice: 65000, category: 'Accessories',
+    desc: 'L’esthétique sombre rencontre l’ingénierie de précision. Une montre minimaliste avec une finition noir furtif.',
+    image: '/watch.png', stock: 15, status: 'active', vendor: 'Solo Dakar' }
 ];
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 function loadProducts() {
   const s = localStorage.getItem('solo_products');
-  if (s) return JSON.parse(s);
+  if (s) {
+    let prods = JSON.parse(s);
+    // Convert old USD seed prices (< 1000) to FCFA
+    let migrated = false;
+    prods = prods.map(p => {
+      if (p.price && p.price < 1000) {
+        migrated = true;
+        return {
+          ...p,
+          price: Math.round(p.price * 600),
+          comparePrice: p.comparePrice ? Math.round(p.comparePrice * 600) : null
+        };
+      }
+      return p;
+    });
+    if (migrated) localStorage.setItem('solo_products', JSON.stringify(prods));
+    return prods;
+  }
   localStorage.setItem('solo_products', JSON.stringify(SEED_PRODUCTS));
   return SEED_PRODUCTS;
 }
@@ -95,12 +118,12 @@ function renderProducts() {
 
   productGrid.innerHTML = filtered.map(p => {
     const isSale = p.comparePrice && Number(p.comparePrice) > Number(p.price);
-    const compareHtml = isSale ? `<span style="text-decoration:line-through; color:var(--text-light); font-size:0.85rem; margin-left:0.35rem;">$${Number(p.comparePrice).toFixed(2)}</span>` : '';
+    const compareHtml = isSale ? `<span style="text-decoration:line-through; color:var(--text-light); font-size:0.85rem; margin-left:0.35rem;">${formatFCFA(p.comparePrice)}</span>` : '';
 
     return `
     <div class="product-card" data-id="${p.id}" tabindex="0" role="button" aria-label="View ${p.name}">
       <div class="img-container">
-        ${p.stock === 0 ? `<div class="img-badge out-of-stock-badge" style="background:var(--danger); color:white;">Out of Stock</div>` : (isSale ? `<div class="img-badge" style="background:#6D28D9; color:white; font-weight:700;">SALE</div>` : (p.category ? `<div class="img-badge">${p.category}</div>` : ''))}
+        ${p.stock === 0 ? `<div class="img-badge out-of-stock-badge" style="background:var(--danger); color:white;">Épuisé</div>` : (isSale ? `<div class="img-badge" style="background:#6D28D9; color:white; font-weight:700;">PROMO</div>` : (p.category ? `<div class="img-badge">${p.category}</div>` : ''))}
         <img src="${(p.images && p.images[0]) || p.image || ''}" alt="${p.name}" class="product-image"
           onerror="this.src='https://placehold.co/600x400/F0EFFF/4F46E5?text=Solo'" style="${p.stock === 0 ? 'opacity: 0.5; filter: grayscale(1);' : ''}">
       </div>
@@ -109,8 +132,8 @@ function renderProducts() {
         <h3 class="product-title">${p.name}</h3>
         <p class="product-desc">${p.desc || ''}</p>
         <div class="product-footer">
-          <div class="product-price">$${Number(p.price).toFixed(2)} ${compareHtml}</div>
-          ${p.stock === 0 ? `<button class="add-to-cart-btn disabled" disabled style="background:var(--border); color:var(--text-muted); cursor:not-allowed;">Sold Out</button>` : `<button class="add-to-cart-btn" data-id="${p.id}">+ Cart</button>`}
+          <div class="product-price">${formatFCFA(p.price)} ${compareHtml}</div>
+          ${p.stock === 0 ? `<button class="add-to-cart-btn disabled" disabled style="background:var(--border); color:var(--text-muted); cursor:not-allowed;">Épuisé</button>` : `<button class="add-to-cart-btn" data-id="${p.id}">+ Panier</button>`}
         </div>
       </div>
     </div>`;
@@ -151,7 +174,7 @@ function renderProducts() {
 
 function animateBtn(btn) {
   const orig = btn.textContent;
-  btn.textContent = '✓ Added!';
+  btn.textContent = '✓ Ajouté!';
   btn.style.background = 'var(--accent)';
   btn.style.color = 'white';
   setTimeout(() => {
@@ -172,7 +195,7 @@ function addToCart(productId, qty = 1) {
   // Check stock limit
   if (p.stock !== undefined && p.stock !== null) {
     if (currentQty + qty > p.stock) {
-      alert(`Sorry, only ${p.stock} units available in stock.`);
+      alert(`Désolé, seulement ${p.stock} unités disponibles en stock.`);
       qty = p.stock - currentQty;
       if (qty <= 0) return;
     }
@@ -181,7 +204,7 @@ function addToCart(productId, qty = 1) {
   if (existing) {
     existing.qty += qty;
   } else {
-    cart.push({ id: productId, qty });
+    cart.push({ id: productId, price: p.price, name: p.name, image: p.image, qty });
   }
   saveCart(cart);
   updateCartUI();
@@ -193,7 +216,7 @@ function setCartQty(productId, qty) {
   if (!p) return;
 
   if (p.stock !== undefined && p.stock !== null && qty > p.stock) {
-    alert(`Sorry, only ${p.stock} units available in stock.`);
+    alert(`Désolé, seulement ${p.stock} unités disponibles en stock.`);
     qty = p.stock;
   }
 
@@ -213,31 +236,34 @@ function updateCartUI() {
   // Count badge
   cartCountEl.textContent = totalQty;
   cartCountEl.classList.toggle('visible', totalQty > 0);
-  cartQtyLabel.textContent = totalQty > 0 ? `${totalQty} item${totalQty !== 1 ? 's' : ''}` : '';
+  cartQtyLabel.textContent = totalQty > 0 ? `(${totalQty})` : '';
 
   // Items list
   if (cart.length === 0) {
     cartItemsEl.innerHTML = `<div class="empty-cart">
       <div class="empty-icon">🛒</div>
-      <p>Your cart is empty.</p>
+      <p>Votre panier est vide.</p>
     </div>`;
   } else {
     cartItemsEl.innerHTML = cart.map(c => {
       const p = products.find(p => p.id === c.id);
-      if (!p) return '';
+      const itemName = c.name || (p ? p.name : 'Produit');
+      const itemPrice = c.price || (p ? p.price : 0);
+      const itemImg = c.image || (p ? p.image : '');
+
       return `<div class="cart-item">
-        <img src="${p.image || ''}" alt="${p.name}"
+        <img src="${itemImg}" alt="${itemName}"
              onerror="this.src='https://placehold.co/72x72/F0EFFF/4F46E5?text=?'">
         <div class="cart-item-info">
-          <div class="cart-item-name">${p.name}</div>
-          <div class="cart-item-price">$${(Number(p.price) * c.qty).toFixed(2)}</div>
+          <div class="cart-item-name">${itemName}</div>
+          <div class="cart-item-price">${formatFCFA(Number(itemPrice) * c.qty)}</div>
           <div class="cart-qty-stepper">
-            <button class="stepper-btn" data-action="dec" data-id="${p.id}">−</button>
+            <button class="stepper-btn" data-action="dec" data-id="${c.id}">−</button>
             <span class="stepper-qty">${c.qty}</span>
-            <button class="stepper-btn" data-action="inc" data-id="${p.id}">+</button>
+            <button class="stepper-btn" data-action="inc" data-id="${c.id}">+</button>
           </div>
         </div>
-        <button class="cart-item-remove" data-id="${p.id}" aria-label="Remove ${p.name}">
+        <button class="cart-item-remove" data-id="${c.id}" aria-label="Supprimer ${itemName}">
           <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
         </button>
       </div>`;
@@ -262,9 +288,10 @@ function updateCartUI() {
   // Total
   const total = cart.reduce((s, c) => {
     const p = products.find(p => p.id === c.id);
-    return s + (p ? Number(p.price) * c.qty : 0);
+    const itemPrice = c.price || (p ? p.price : 0);
+    return s + (Number(itemPrice) * c.qty);
   }, 0);
-  cartTotalPriceEl.textContent = `$${total.toFixed(2)}`;
+  cartTotalPriceEl.textContent = formatFCFA(total);
 }
 
 // ── Quick-View ────────────────────────────────────────────────────────────────
@@ -274,10 +301,10 @@ function openQuickView(id) {
   qvProductId = id;
   qvQty = 1;
   $('qv-qty-val').textContent = 1;
-  $('qv-image').src = p.image || '';
+  $('qv-image').src = (p.images && p.images[0]) || p.image || '';
   $('qv-name').textContent = p.name;
   $('qv-desc').textContent = p.desc || '';
-  $('qv-price').textContent = `$${Number(p.price).toFixed(2)}`;
+  $('qv-price').textContent = formatFCFA(p.price);
   $('qv-category').textContent = p.category || '';
   qvOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';

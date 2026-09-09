@@ -528,24 +528,25 @@ async function sendTelegramAlert(order) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return;
 
-  const itemsList = order.items.map(i => `  • ${sanitizeText(i.name, 60)} × ${i.qty} ($${(Number(i.price) * i.qty).toFixed(2)})`).join('\n');
+  const fmtCFA = num => `${Math.round(Number(num) || 0).toLocaleString('fr-FR')} FCFA`;
+  const itemsList = order.items.map(i => `  • ${sanitizeText(i.name, 60)} × ${i.qty} (${fmtCFA(Number(i.price) * i.qty)})`).join('\n');
   const cleanPhone = (order.customer.phone || '').replace(/[^0-9+]/g, '');
 
-  const text = `🛍️ *NEW ORDER RECEIVED!*
+  const text = `🛍️ *NOUVELLE COMMANDE REÇUE!* (Sénégal)
 ━━━━━━━━━━━━━━━━━━
-🆔 *Order:* \`${order.orderId}\`
-👤 *Customer:* ${order.customer.name || 'Anonymous'}
-📞 *Phone:* ${order.customer.phone || 'N/A'}
-📍 *Address:* ${order.customer.location || 'N/A'}
+🆔 *Commande:* \`${order.orderId}\`
+👤 *Client:* ${order.customer.name || 'Anonyme'}
+📞 *Téléphone:* ${order.customer.phone || 'N/A'}
+📍 *Adresse:* ${order.customer.location || 'N/A'}
 ✉️ *Email:* ${order.customer.email || 'N/A'}
-💵 *Total:* $${Number(order.total).toFixed(2)} (Cash on Delivery)
+💵 *Total:* ${fmtCFA(order.total)} (Paiement à la livraison)
 
-📦 *Items Ordered:*
+📦 *Articles commandés:*
 ${itemsList}
 
 ━━━━━━━━━━━━━━━━━━
-💬 [WhatsApp Customer](https://wa.me/${cleanPhone.replace('+', '')})
-⚙️ [Open Admin Dashboard](${process.env.CLIENT_URL || 'https://adounas.com'}/admin.html)`;
+💬 [Contacter sur WhatsApp](https://wa.me/${cleanPhone.replace('+', '')})
+⚙️ [Ouvrir le panneau Admin](${process.env.CLIENT_URL || 'https://adounas.com'}/admin.html)`;
 
   try {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

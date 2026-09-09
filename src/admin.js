@@ -134,9 +134,32 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// ── Currency Formatter (Senegal / FCFA) ──────────────────────────────────────
+function formatFCFA(amount) {
+  const num = Math.round(Number(amount) || 0);
+  return `${num.toLocaleString('fr-FR')} FCFA`;
+}
+
 // ── Store Helpers ─────────────────────────────────────────────────────────────
 function loadProducts() {
-  return JSON.parse(localStorage.getItem('solo_products') || '[]');
+  const s = localStorage.getItem('solo_products');
+  if (!s) return [];
+  let prods = JSON.parse(s);
+  // Migrate any old USD values (< 1000) to FCFA
+  let migrated = false;
+  prods = prods.map(p => {
+    if (p.price && p.price < 1000) {
+      migrated = true;
+      return {
+        ...p,
+        price: Math.round(p.price * 600),
+        comparePrice: p.comparePrice ? Math.round(p.comparePrice * 600) : null
+      };
+    }
+    return p;
+  });
+  if (migrated) localStorage.setItem('solo_products', JSON.stringify(prods));
+  return prods;
 }
 function saveProducts(p) {
   localStorage.setItem('solo_products', JSON.stringify(p));
@@ -280,9 +303,9 @@ function renderProductsTable() {
       inventoryBadge = `<span style="font-weight:600; font-size:0.85rem;">${p.stock} in stock</span>`;
     }
 
-    const priceFormatted = `$${Number(p.price || 0).toFixed(2)}`;
-    const compareFormatted = p.comparePrice ? `<span style="text-decoration:line-through; color:var(--text-light); font-size:0.75rem; margin-left:4px;">$${Number(p.comparePrice).toFixed(2)}</span>` : '';
-    const saleTag = (p.comparePrice && Number(p.comparePrice) > Number(p.price)) ? `<span class="badge-status-pill badge-sale" style="font-size:0.65rem; padding:0.1rem 0.35rem; margin-left:4px;">SALE</span>` : '';
+    const priceFormatted = formatFCFA(p.price || 0);
+    const compareFormatted = p.comparePrice ? `<span style="text-decoration:line-through; color:var(--text-light); font-size:0.75rem; margin-left:4px;">${formatFCFA(p.comparePrice)}</span>` : '';
+    const saleTag = (p.comparePrice && Number(p.comparePrice) > Number(p.price)) ? `<span class="badge-status-pill badge-sale" style="font-size:0.65rem; padding:0.1rem 0.35rem; margin-left:4px;">PROMO</span>` : '';
 
     const firstImage = (p.images && p.images.length > 0) ? p.images[0] : (p.image || '');
 
@@ -461,11 +484,11 @@ function calculatePricingMetrics() {
   if (price > 0 && cost > 0) {
     const profit = price - cost;
     const margin = (profit / price) * 100;
-    metricProfit.textContent = `$${profit.toFixed(2)}`;
+    metricProfit.textContent = formatFCFA(profit);
     metricProfit.className = profit >= 0 ? 'metric-val text-success' : 'metric-val text-danger';
     metricMargin.textContent = `${margin.toFixed(1)}%`;
   } else {
-    metricProfit.textContent = '$0.00';
+    metricProfit.textContent = '0 FCFA';
     metricMargin.textContent = '0%';
   }
 
@@ -473,10 +496,10 @@ function calculatePricingMetrics() {
   if (compare > price && price > 0) {
     const discountAmt = compare - price;
     const discountPct = Math.round((discountAmt / compare) * 100);
-    metricDiscount.textContent = `${discountPct}% OFF (Save $${discountAmt.toFixed(2)})`;
+    metricDiscount.textContent = `${discountPct}% PROMO (Économie ${formatFCFA(discountAmt)})`;
     metricDiscount.className = 'metric-val text-success';
   } else {
-    metricDiscount.textContent = 'No discount';
+    metricDiscount.textContent = 'Aucune réduction';
     metricDiscount.className = 'metric-val';
   }
 }
@@ -824,9 +847,12 @@ async function handleProductImport(url, statusEl, btnEl) {
     // Auto-fill Shopify form
     if (p.name) spTitle.value = p.name;
     if (p.price) {
-      spPrice.value = p.price;
-      // Set reasonable compare-at price for sale display (e.g. +25%)
-      spComparePrice.value = (Number(p.price) * 1.25).toFixed(2);
+      const rawPrice = Number(p.price);
+      // If scraped from US site (< 1000), convert to FCFA (approx 1 USD = 600 FCFA)
+      const fcfaPrice = rawPrice < 1000 ? Math.round(rawPrice * 600) : Math.round(rawPrice);
+      spPrice.value = fcfaPrice;
+      // Set reasonable compare-at price for promo display (e.g. +25%)
+      spComparePrice.value = Math.round(fcfaPrice * 1.25);
     }
     if (p.desc) spDesc.value = p.desc;
     if (p.category) spCategory.value = p.category;
@@ -1065,7 +1091,7 @@ function renderOrders() {
   ordersListEl.innerHTML = orders.map(o => {
     const rawPhone = (o.customer.phone || '').trim();
     const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
-    const waMsg = encodeURIComponent(`Hello ${o.customer.name}! This is Adounas store regarding your order #${o.orderId} ($${Number(o.total).toFixed(2)}). Your delivery to ${o.customer.location} is being prepared!`);
+    const waMsg = encodeURIComponent(`Bonjour ${o.customer.name}! Ici la boutique Adounas concernant votre commande #${o.orderId} (${formatFCFA(o.total)}). Votre livraison à ${o.customer.location} est en cours de préparation!`);
     const waUrl = cleanDigits ? `https://wa.me/${cleanDigits}?text=${waMsg}` : '#';
     const telUrl = rawPhone ? `tel:${rawPhone}` : '#';
 
@@ -1073,7 +1099,7 @@ function renderOrders() {
     <div class="shopify-card" style="margin-bottom:1rem;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
         <div>
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Order #${escO(o.orderId)} · ${fmtDate(o.createdAt)}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Commande #${escO(o.orderId)} · ${fmtDate(o.createdAt)}</div>
           <div style="font-size:1.05rem; font-weight:700; margin:0.35rem 0;">
             ${escO(o.customer.name)} <span style="font-weight:400; font-size:0.88rem; color:var(--text-muted);">(${escO(o.customer.phone)})</span>
           </div>
@@ -1084,7 +1110,7 @@ function renderOrders() {
             ${o.items.map(i => `<strong>${escO(i.name)}</strong> × ${i.qty}`).join(' &nbsp;|&nbsp; ')}
           </div>
           <div style="margin-top:0.75rem; font-size:1.1rem; font-weight:800; color:var(--text);">
-            $${Number(o.total).toFixed(2)} <span style="font-size:0.75rem; color:#108043; background:#E3F1DF; padding:0.15rem 0.4rem; border-radius:4px;">💵 Cash on Delivery</span>
+            ${formatFCFA(o.total)} <span style="font-size:0.75rem; color:#108043; background:#E3F1DF; padding:0.15rem 0.4rem; border-radius:4px;">💵 Paiement à la livraison</span>
           </div>
           <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
             ${cleanDigits ? `<a href="${waUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" style="color:#25D366; font-weight:700;">💬 WhatsApp</a>` : ''}

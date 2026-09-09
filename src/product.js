@@ -1,6 +1,11 @@
 import './style.css';
 import './product.css';
 
+function formatFCFA(amount) {
+  const num = Math.round(Number(amount) || 0);
+  return `${num.toLocaleString('fr-FR')} FCFA`;
+}
+
 // Reuse localStorage getters from main logic via global if needed, but best to re-import or redefine
 function loadProducts() {
   const s = localStorage.getItem('solo_products');
@@ -17,7 +22,7 @@ const loadingEl = document.getElementById('pdp-loading');
 const contentEl = document.getElementById('pdp-content');
 
 if (!product) {
-  loadingEl.innerHTML = `<h2>Product not found</h2><a href="/" style="color:var(--accent)">← Back to Store</a>`;
+  loadingEl.innerHTML = `<h2>Produit non trouvé</h2><a href="/" style="color:var(--accent)">← Retour à la boutique</a>`;
 } else {
   // Populate meta tags for SEO (client side simulation)
   document.title = `${product.name} | Solo`;
@@ -45,12 +50,12 @@ if (!product) {
   const saleBadge = document.getElementById('pdp-sale-badge');
 
   function updatePriceDisplay(currentPrice, comparePrice) {
-    priceEl.textContent = `$${Number(currentPrice).toFixed(2)}`;
+    priceEl.textContent = formatFCFA(currentPrice);
     if (comparePrice && Number(comparePrice) > Number(currentPrice)) {
-      compareEl.textContent = `$${Number(comparePrice).toFixed(2)}`;
+      compareEl.textContent = formatFCFA(comparePrice);
       compareEl.style.display = 'block';
       const pct = Math.round(((comparePrice - currentPrice) / comparePrice) * 100);
-      saleBadge.textContent = `${pct}% OFF`;
+      saleBadge.textContent = `${pct}% PROMO`;
       saleBadge.style.display = 'inline-block';
     } else {
       compareEl.style.display = 'none';

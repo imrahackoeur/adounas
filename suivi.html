@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <title>Suivi de Commande en Temps Réel | Adounas</title>
+    <meta name="description" content="Suivez l'état de votre commande et la livraison de votre colis en temps réel au Sénégal." />
+    <meta name="theme-color" content="#4F46E5" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+
+    <!-- ── Navbar ─────────────────────────────────────────── -->
+    <header class="navbar" id="navbar">
+      <div class="nav-left">
+        <a href="/" class="logo">Adounas<span class="logo-dot">.</span></a>
+        <nav class="nav-links">
+          <a href="/" class="nav-link">Accueil</a>
+          <a href="/#products-section" class="nav-link">Boutique</a>
+          <a href="/suivi.html" class="nav-link active">📦 Suivi Commande</a>
+        </nav>
+      </div>
+
+      <div class="nav-right">
+        <a href="/" class="btn-store-link">← Boutique</a>
+        <!-- Cart -->
+        <div class="cart-icon-wrapper" id="cart-icon" role="button" aria-label="Ouvrir le panier">
+          <svg viewBox="0 0 24 24" class="cart-svg">
+            <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 13.1 5.9 14 7 14h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.25 3H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
+          </svg>
+          <span class="cart-count" id="cart-count">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Main Content ───────────────────────────────────── -->
+    <main class="track-main">
+
+      <!-- Header Hero -->
+      <section class="track-hero">
+        <div class="track-hero-content">
+          <span class="track-badge">📍 Suivi Express Sénégal</span>
+          <h1>Où est ma commande ?</h1>
+          <p>Entrez votre <strong>numéro de téléphone</strong> (utilisé lors de la commande) ou votre <strong>identifiant de commande</strong> pour suivre l'état de votre livraison en temps réel.</p>
+
+          <form class="track-search-form" id="track-form">
+            <div class="track-input-group">
+              <span class="track-input-icon">🔍</span>
+              <input
+                type="text"
+                id="track-input"
+                placeholder="Ex: 77 123 45 67 ou ORD-1725..."
+                autocomplete="off"
+                required
+              />
+              <button type="submit" id="track-submit-btn" class="btn btn-primary track-btn">
+                <span>Suivre mon colis</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Results Container -->
+      <section class="track-results-section" id="track-results-section">
+        <div id="track-loading" class="track-status-box" style="display:none;">
+          <div class="spinner"></div>
+          <p>Recherche de vos informations de livraison…</p>
+        </div>
+
+        <div id="track-error" class="track-status-box error" style="display:none;">
+          <span class="status-icon">⚠️</span>
+          <h3>Aucune commande trouvée</h3>
+          <p id="track-error-msg">Veuillez vérifier votre numéro de téléphone ou identifiant de commande.</p>
+        </div>
+
+        <div id="track-orders-container" class="track-orders-container">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- Trust Features -->
+      <section class="track-trust-grid">
+        <div class="trust-card">
+          <span class="trust-icon">🛵</span>
+          <h3>Livraison Rapide</h3>
+          <p>Expédition express à Dakar et partout au Sénégal en 24h à 48h.</p>
+        </div>
+        <div class="trust-card">
+          <span class="trust-icon">💵</span>
+          <h3>Paiement à la Livraison</h3>
+          <p>Payez en espèces ou via Wave / Orange Money à la réception de votre colis.</p>
+        </div>
+        <div class="trust-card">
+          <span class="trust-icon">💬</span>
+          <h3>Assistance WhatsApp</h3>
+          <p>Notre service client est disponible 7j/7 pour toute question sur votre commande.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── Cart Drawer & Overlay ──────────────────────────── -->
+    <div class="overlay" id="overlay"></div>
+    <div class="cart-sidebar" id="cart-sidebar">
+      <div class="cart-header">
+        <h2>Votre Panier <span id="cart-qty-label"></span></h2>
+        <button class="close-cart" id="close-cart" aria-label="Fermer le panier">✕</button>
+      </div>
+      <div class="cart-items" id="cart-items"></div>
+      <div class="cart-delivery-form">
+        <div class="cart-delivery-title">📦 Informations de livraison (Sénégal)</div>
+        <input type="text" id="delivery-name" placeholder="Nom complet *" maxlength="60">
+        <input type="tel" id="delivery-phone" placeholder="Numéro de téléphone (WhatsApp) *" maxlength="20">
+        <input type="text" id="delivery-location" placeholder="Ville / Quartier / Adresse (ex: Dakar, Almadies) *" maxlength="140">
+      </div>
+      <div class="cart-footer">
+        <div class="cart-total"><span>Total</span><span id="cart-total-price">0 FCFA</span></div>
+        <div class="cart-cod-badge">💵 Paiement à la livraison</div>
+        <button class="btn btn-primary" id="checkout-btn" style="width:100%">Commander maintenant</button>
+      </div>
+    </div>
+
+    <!-- ── Footer ─────────────────────────────────────────── -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div>
+          <div class="logo" style="color:white;margin-bottom:0.75rem">Adounas<span class="logo-dot">.</span></div>
+          <p style="color:var(--text-light);font-size:0.9rem;line-height:1.6">La boutique de référence pour vos achats au Sénégal. Qualité garantie et livraison express.</p>
+        </div>
+        <div>
+          <h4 style="color:white;margin-bottom:1rem;font-size:0.95rem">Navigation</h4>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:0.5rem;padding:0">
+            <li><a href="/" style="color:var(--text-light);text-decoration:none;font-size:0.88rem">Accueil</a></li>
+            <li><a href="/#products-section" style="color:var(--text-light);text-decoration:none;font-size:0.88rem">Boutique</a></li>
+            <li><a href="/suivi.html" style="color:var(--accent);text-decoration:none;font-size:0.88rem;font-weight:700">📦 Suivre ma commande</a></li>
+            <li><a href="/admin.html" style="color:var(--text-light);text-decoration:none;font-size:0.88rem">Espace Vendeur</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="color:white;margin-bottom:1rem;font-size:0.95rem">Contact & Support</h4>
+          <p style="color:var(--text-light);font-size:0.88rem;line-height:1.6">Dakar, Sénégal<br>WhatsApp: +221 77 000 00 00<br>Paiement: Cash à la livraison / Wave</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Adounas. Tous droits réservés.</p>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/suivi.js"></script>
+  </body>
+</html>

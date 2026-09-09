@@ -18,6 +18,7 @@ export default defineConfig({
         main:          resolve(__dirname, 'index.html'),
         admin:         resolve(__dirname, 'admin.html'),
         product:       resolve(__dirname, 'product.html'),
+        suivi:         resolve(__dirname, 'suivi.html'),
       }
     }
   }

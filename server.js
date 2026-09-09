@@ -644,6 +644,62 @@ app.get('/api/orders', adminAuth, (_, res) => {
   res.json(loadOrders());
 });
 
+// ── GET /api/orders/track (Customer tracking by Phone or Order ID) ────────────
+app.get('/api/orders/track', (req, res) => {
+  const query = sanitizeText(req.query.query || req.query.id || req.query.phone || '', 100).trim();
+  if (!query) {
+    return res.status(400).json({ error: 'Veuillez saisir votre numéro de téléphone ou identifiant de commande.' });
+  }
+
+  const orders = loadOrders();
+  const cleanQ = query.toLowerCase();
+  const digitsQ = cleanQ.replace(/[^0-9]/g, '');
+
+  const matches = orders.filter(o => {
+    // 1. Direct Order ID match
+    if (o.orderId && o.orderId.toLowerCase() === cleanQ) return true;
+    if (o.orderId && o.orderId.toLowerCase().includes(cleanQ)) return true;
+
+    // 2. Phone match (handling Senegal +221 prefixes and spaces)
+    if (digitsQ.length >= 6 && o.customer && o.customer.phone) {
+      const orderPhoneDigits = o.customer.phone.replace(/[^0-9]/g, '');
+      if (orderPhoneDigits.endsWith(digitsQ) || digitsQ.endsWith(orderPhoneDigits)) return true;
+      const nationalQ = digitsQ.replace(/^221/, '');
+      const nationalPhone = orderPhoneDigits.replace(/^221/, '');
+      if (nationalQ && nationalPhone && (nationalPhone.includes(nationalQ) || nationalQ.includes(nationalPhone))) return true;
+    }
+
+    // 3. Exact Email match
+    if (o.customer && o.customer.email && o.customer.email.toLowerCase() === cleanQ) return true;
+
+    return false;
+  });
+
+  if (matches.length === 0) {
+    return res.status(404).json({ error: 'Aucune commande trouvée pour cette recherche. Vérifiez votre numéro ou code de commande.' });
+  }
+
+  const sanitizedResults = matches.map(o => ({
+    orderId: o.orderId,
+    status: o.status || 'pending',
+    createdAt: o.createdAt,
+    customer: {
+      name: o.customer.name,
+      location: o.customer.location,
+      phone: o.customer.phone
+    },
+    items: (o.items || []).map(i => ({
+      name: i.name,
+      price: i.price,
+      qty: i.qty,
+      image: i.image
+    })),
+    total: o.total
+  }));
+
+  res.json({ ok: true, orders: sanitizedResults });
+});
+
 // ── GET /api/orders/:id  (receipt view by specific ID) ────────────────────────
 app.get('/api/orders/:id', (req, res) => {
   const order = loadOrders().find(o => o.orderId === req.params.id);

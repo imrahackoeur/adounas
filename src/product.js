@@ -415,11 +415,12 @@ if (checkoutBtn) {
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
+      if (res.ok && (data.ok || data.orderId)) {
+        const orderId = data.orderId || (data.order && data.order.id);
         localStorage.removeItem('solo_cart');
         updatePDPcartUI();
         closeCart();
-        alert(`🎉 Merci ${custName} ! Votre commande #${data.order.id} a été confirmée. Nous vous contacterons sur WhatsApp.`);
+        window.location.href = `/suivi.html?id=${orderId}`;
       } else {
         throw new Error(data.error || 'Erreur lors de la commande');
       }

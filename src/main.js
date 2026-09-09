@@ -370,7 +370,7 @@ async function executeOrder(user) {
     if (data.orderId) {
       saveCart([]);
       cart = [];
-      window.location.href = `/order-confirmed.html?id=${data.orderId}`;
+      window.location.href = `/suivi.html?id=${data.orderId}`;
     } else {
       throw new Error(data.error || 'Order failed.');
     }

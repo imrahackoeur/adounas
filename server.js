@@ -275,6 +275,157 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── POST /api/admin/import-product (Alibaba, AliExpress, Amazon & Store Importer)
+app.post('/api/admin/import-product', adminAuth, async (req, res) => {
+  const { url } = req.body;
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'A valid product URL is required.' });
+  }
+
+  let parsedUrl;
+  try {
+    let cleanUrl = url.trim();
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = 'https://' + cleanUrl;
+    }
+    parsedUrl = new URL(cleanUrl);
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL format.' });
+  }
+
+  try {
+    const response = await fetch(parsedUrl.href, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(15000)
+    });
+
+    if (!response.ok) {
+      return res.status(400).json({ error: `Could not fetch product page (HTTP ${response.status})` });
+    }
+
+    const html = await response.text();
+
+    // 1. Helper to extract meta tag content
+    const getMeta = (propNames) => {
+      for (const name of propNames) {
+        const regex1 = new RegExp(`<meta[^>]+(?:property|name)=["']${name}["'][^>]+content=["']([^"']+)["']`, 'i');
+        const match1 = html.match(regex1);
+        if (match1 && match1[1]) return match1[1].trim();
+
+        const regex2 = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${name}["']`, 'i');
+        const match2 = html.match(regex2);
+        if (match2 && match2[1]) return match2[1].trim();
+      }
+      return '';
+    };
+
+    // 2. Extract JSON-LD schemas
+    let jsonLdProduct = null;
+    const jsonLdMatches = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
+    for (const block of jsonLdMatches) {
+      try {
+        const rawJson = block.replace(/<script[^>]*>|<\/script>/gi, '').trim();
+        const parsed = JSON.parse(rawJson);
+        const findProduct = (item) => {
+          if (!item) return null;
+          if (item['@type'] === 'Product') return item;
+          if (Array.isArray(item['@graph'])) return item['@graph'].find(g => g['@type'] === 'Product');
+          if (Array.isArray(item)) return item.find(g => g['@type'] === 'Product');
+          return null;
+        };
+        const found = findProduct(parsed);
+        if (found) { jsonLdProduct = found; break; }
+      } catch {}
+    }
+
+    // 3. Title / Name extraction
+    let title = (jsonLdProduct && jsonLdProduct.name) ||
+                getMeta(['og:title', 'twitter:title', 'title']) || '';
+    if (!title) {
+      const titleTag = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      title = titleTag ? titleTag[1].trim() : '';
+    }
+    // Clean unwanted branding suffixes like " | Alibaba.com", " - AliExpress"
+    title = title.replace(/\s*[-–|]\s*(Alibaba|AliExpress|Amazon|Shein|eBay|Taobao|Wish).*$/i, '').trim();
+
+    // 4. Description extraction
+    let desc = (jsonLdProduct && jsonLdProduct.description) ||
+               getMeta(['og:description', 'twitter:description', 'description']) || '';
+    desc = desc.replace(/\s*[-–|]\s*(Alibaba|AliExpress|Amazon).*$/i, '').trim();
+    if (desc.length > 500) desc = desc.slice(0, 497) + '...';
+
+    // 5. Price extraction
+    let price = '';
+    if (jsonLdProduct && jsonLdProduct.offers) {
+      const offers = Array.isArray(jsonLdProduct.offers) ? jsonLdProduct.offers[0] : jsonLdProduct.offers;
+      if (offers && offers.price) price = parseFloat(offers.price);
+      else if (offers && offers.lowPrice) price = parseFloat(offers.lowPrice);
+    }
+    if (!price) {
+      const priceMeta = getMeta(['og:price:amount', 'product:price:amount']);
+      if (priceMeta) price = parseFloat(priceMeta.replace(/[^0-9.]/g, ''));
+    }
+
+    // 6. Image(s) extraction
+    const images = new Set();
+    if (jsonLdProduct && jsonLdProduct.image) {
+      if (Array.isArray(jsonLdProduct.image)) jsonLdProduct.image.forEach(img => typeof img === 'string' && images.add(img));
+      else if (typeof jsonLdProduct.image === 'string') images.add(jsonLdProduct.image);
+      else if (jsonLdProduct.image && jsonLdProduct.image.url) images.add(jsonLdProduct.image.url);
+    }
+
+    const ogImg = getMeta(['og:image', 'og:image:secure_url', 'twitter:image']);
+    if (ogImg) images.add(ogImg);
+
+    // Fallback image search in HTML (high-res image patterns)
+    const imgMatches = html.matchAll(/<img[^>]+src=["'](https?:\/\/[^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/gi);
+    for (const m of imgMatches) {
+      const url = m[1];
+      if (!url.includes('logo') && !url.includes('icon') && !url.includes('avatar') && !url.includes('sprite')) {
+        images.add(url);
+        if (images.size >= 6) break;
+      }
+    }
+
+    // Normalize image URLs
+    const formattedImages = Array.from(images).map(img => {
+      if (img.startsWith('//')) return 'https:' + img;
+      return img;
+    }).filter(img => img.startsWith('http'));
+
+    // 7. Category extraction
+    let category = (jsonLdProduct && jsonLdProduct.category) || '';
+    if (!category) {
+      if (/bag|backpack|wallet|purse|tote|luggage/i.test(title)) category = 'Bags';
+      else if (/watch|chronos|clock|strap/i.test(title)) category = 'Accessories';
+      else if (/shirt|jacket|hoodie|pants|dress|suit|shoes|sneakers/i.test(title)) category = 'Apparel';
+      else if (/phone|case|charger|earbuds|audio|tech|cable/i.test(title)) category = 'Electronics';
+      else category = 'General';
+    }
+
+    res.json({
+      ok: true,
+      product: {
+        name: title || 'Imported Product',
+        price: price && !isNaN(price) ? Number(price.toFixed(2)) : '',
+        desc: desc || '',
+        category,
+        image: formattedImages[0] || '',
+        images: formattedImages
+      }
+    });
+  } catch (err) {
+    console.error('Import product error:', err.message);
+    res.status(500).json({ error: `Could not import product: ${err.message}` });
+  }
+});
+
+
 // ── GET /api/geocode (GPS address lookup) ──────────────────────────────────────
 app.get('/api/geocode', async (req, res) => {
   const { lat, lon } = req.query;

@@ -62,6 +62,31 @@
         <aside class="form-panel">
           <h2><span id="form-title">➕ Add New Product</span></h2>
 
+          <!-- 1-Click Importer Card -->
+          <div class="importer-card" id="importer-card">
+            <div class="importer-header">
+              <span class="importer-icon">⚡</span>
+              <div>
+                <h3>1-Click Product Importer</h3>
+                <p>Paste product link from Alibaba, AliExpress, Amazon, Shein, etc.</p>
+              </div>
+            </div>
+            <div class="importer-body">
+              <div class="importer-input-group">
+                <input id="import-url-input" type="url" placeholder="https://www.alibaba.com/product-detail/..." autocomplete="off">
+                <button type="button" id="btn-import-product" class="btn-import">
+                  <span class="btn-import-icon">📥</span>
+                  <span class="btn-import-text">Import</span>
+                </button>
+              </div>
+              <div class="importer-status" id="importer-status" style="display:none"></div>
+            </div>
+          </div>
+
+          <div class="importer-divider">
+            <span>OR ENTER DETAILS</span>
+          </div>
+
           <form id="product-form" novalidate>
             <div class="form-group">
               <label for="prod-name">Product Name *</label>

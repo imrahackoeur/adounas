@@ -152,6 +152,86 @@ const cancelBtn      = document.getElementById('cancel-btn');
 const productList    = document.getElementById('admin-product-list');
 const productCount   = document.getElementById('product-count');
 
+// ── 1-Click Product Importer ──────────────────────────────────────────────────
+const importUrlInput = document.getElementById('import-url-input');
+const btnImportProd  = document.getElementById('btn-import-product');
+const importStatus   = document.getElementById('importer-status');
+
+function setImportStatus(msg, type) {
+  if (!importStatus) return;
+  importStatus.textContent = msg;
+  importStatus.className = `importer-status ${type}`;
+  importStatus.style.display = 'block';
+}
+
+if (btnImportProd) {
+  btnImportProd.addEventListener('click', async () => {
+    const url = (importUrlInput.value || '').trim();
+    if (!url) {
+      setImportStatus('Please enter a product URL first.', 'error');
+      importUrlInput.focus();
+      return;
+    }
+
+    if (!/^https?:\/\//i.test(url)) {
+      setImportStatus('Please enter a valid URL starting with http:// or https://', 'error');
+      return;
+    }
+
+    setImportStatus('⏳ Fetching product details from supplier...', 'loading');
+    btnImportProd.disabled = true;
+
+    try {
+      const res = await adminFetch('/api/admin/import-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Failed to extract product data.');
+      }
+
+      const p = data.product;
+
+      // Populate form
+      if (p.name) nameInput.value = p.name;
+      if (p.price) priceInput.value = p.price;
+      if (p.category) categoryInput.value = p.category;
+      if (p.desc) descInput.value = p.desc;
+
+      const imgs = (p.images && p.images.length > 0) ? p.images.join(', ') : (p.image || '');
+      imageUrlInput.value = imgs;
+
+      if (p.image) {
+        updatePreview(p.image);
+      } else if (p.images && p.images.length > 0) {
+        updatePreview(p.images[0]);
+      }
+
+      setImportStatus(`✅ Imported! Found: "${(p.name || 'Product').substring(0, 45)}..." — review and click Add Product.`, 'success');
+      showToast('🎉 Product imported! Review details & save.');
+
+      // Scroll smoothly to form
+      form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (err) {
+      console.error('Import error:', err);
+      setImportStatus(`❌ Import failed: ${err.message || 'Could not fetch page'}. Check link or enter details manually.`, 'error');
+    } finally {
+      btnImportProd.disabled = false;
+    }
+  });
+
+  importUrlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      btnImportProd.click();
+    }
+  });
+}
+
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');

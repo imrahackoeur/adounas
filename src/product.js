@@ -24,14 +24,106 @@ if (!product) {
 
   // Render product details
   document.getElementById('pdp-title').textContent = product.name;
-  document.getElementById('pdp-price').textContent = `$${Number(product.price).toFixed(2)}`;
+  
+  // Category & Vendor
   document.getElementById('pdp-category').textContent = product.category || '';
+  const vendorEl = document.getElementById('pdp-vendor');
+  if (product.vendor && vendorEl) {
+    vendorEl.textContent = `· ${product.vendor}`;
+  }
+
+  // SKU
+  const skuEl = document.getElementById('pdp-sku');
+  if (product.sku && skuEl) {
+    skuEl.textContent = `SKU: ${product.sku}`;
+    skuEl.style.display = 'block';
+  }
+
+  // Pricing & Sale Badge
+  const priceEl = document.getElementById('pdp-price');
+  const compareEl = document.getElementById('pdp-compare-price');
+  const saleBadge = document.getElementById('pdp-sale-badge');
+
+  function updatePriceDisplay(currentPrice, comparePrice) {
+    priceEl.textContent = `$${Number(currentPrice).toFixed(2)}`;
+    if (comparePrice && Number(comparePrice) > Number(currentPrice)) {
+      compareEl.textContent = `$${Number(comparePrice).toFixed(2)}`;
+      compareEl.style.display = 'block';
+      const pct = Math.round(((comparePrice - currentPrice) / comparePrice) * 100);
+      saleBadge.textContent = `${pct}% OFF`;
+      saleBadge.style.display = 'inline-block';
+    } else {
+      compareEl.style.display = 'none';
+      saleBadge.style.display = 'none';
+    }
+  }
+
+  let activePrice = product.price;
+  let activeStock = product.stock;
+  let selectedVariant = null;
+
+  updatePriceDisplay(product.price, product.comparePrice);
+
+  // Description
   document.getElementById('pdp-desc').textContent = product.desc || '';
+
+  // Variants Selector (Shopify Options)
+  const variantsContainer = document.getElementById('pdp-variants-container');
+  if (product.hasVariants && product.options && product.options.length > 0 && product.variants && product.variants.length > 0) {
+    variantsContainer.style.display = 'flex';
+    const selectedOptions = {};
+
+    // Default to first value for each option
+    product.options.forEach(opt => {
+      selectedOptions[opt.name] = (opt.values && opt.values[0]) || '';
+    });
+
+    function matchVariant() {
+      const comboTitle = Object.values(selectedOptions).join(' / ');
+      const match = product.variants.find(v => v.title === comboTitle) || product.variants[0];
+      if (match) {
+        selectedVariant = match;
+        activePrice = match.price !== undefined ? match.price : product.price;
+        activeStock = match.stock !== undefined ? match.stock : product.stock;
+        updatePriceDisplay(activePrice, product.comparePrice);
+        if (skuEl && match.sku) skuEl.textContent = `SKU: ${match.sku}`;
+      }
+    }
+
+    variantsContainer.innerHTML = product.options.map(opt => `
+      <div class="pdp-option-group" data-option="${opt.name}">
+        <div class="pdp-option-header">${opt.name}: <span class="pdp-option-selected-val" style="font-weight:700;">${selectedOptions[opt.name]}</span></div>
+        <div class="pdp-option-pills">
+          ${(opt.values || []).map((val, idx) => `
+            <button type="button" class="pdp-option-pill ${idx === 0 ? 'active' : ''}" data-option="${opt.name}" data-val="${val}">
+              ${val}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    variantsContainer.querySelectorAll('.pdp-option-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const optName = pill.dataset.option;
+        const optVal = pill.dataset.val;
+        selectedOptions[optName] = optVal;
+
+        const group = pill.closest('.pdp-option-group');
+        group.querySelectorAll('.pdp-option-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        group.querySelector('.pdp-option-selected-val').textContent = optVal;
+
+        matchVariant();
+      });
+    });
+
+    matchVariant();
+  }
 
   // Gallery
   const mainImage = document.getElementById('pdp-main-image');
-  // ensure images is an array, default to single image if old product
-  const images = product.images && product.images.length > 0 ? product.images : [product.image];
+  const images = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
   
   mainImage.src = images[0] || 'https://placehold.co/600x600/F0EFFF/4F46E5?text=No+Image';
 
@@ -65,15 +157,15 @@ if (!product) {
       if (qty > 1) { qty--; qtyVal.textContent = qty; }
     });
     document.getElementById('pdp-qty-plus').addEventListener('click', () => {
-      if (product.stock !== undefined && product.stock !== null && qty >= product.stock) {
-        alert(`Sorry, only ${product.stock} units available in stock.`);
+      if (activeStock !== undefined && activeStock !== null && qty >= activeStock) {
+        alert(`Sorry, only ${activeStock} units available in stock.`);
         return;
       }
       qty++; qtyVal.textContent = qty;
     });
   }
 
-  // Add to cart (interacts with main.js which listens to localStorage or we can dispatch a custom event)
+  // Add to cart
   const addBtn = document.getElementById('pdp-add-btn');
   if (product.stock === 0) {
     addBtn.textContent = 'Sold Out';
@@ -84,16 +176,28 @@ if (!product) {
   } else {
     addBtn.addEventListener('click', () => {
       const cart = JSON.parse(localStorage.getItem('solo_cart') || '[]');
-      const existing = cart.find(c => c.id === product.id);
+      const itemKey = selectedVariant ? `${product.id}_${selectedVariant.title}` : product.id;
+      const existing = cart.find(c => (c.variantKey ? c.variantKey === itemKey : c.id === product.id));
       const currentQty = existing ? existing.qty : 0;
       
-      if (product.stock !== undefined && product.stock !== null && currentQty + qty > product.stock) {
-        alert(`Sorry, you already have ${currentQty} in your cart, and only ${product.stock} are available.`);
+      if (activeStock !== undefined && activeStock !== null && currentQty + qty > activeStock) {
+        alert(`Sorry, you already have ${currentQty} in your cart, and only ${activeStock} are available.`);
         return;
       }
 
-      if (existing) existing.qty += qty;
-      else cart.push({ id: product.id, qty });
+      if (existing) {
+        existing.qty += qty;
+      } else {
+        cart.push({
+          id: product.id,
+          variantKey: itemKey,
+          variantTitle: selectedVariant ? selectedVariant.title : null,
+          price: activePrice,
+          name: selectedVariant ? `${product.name} (${selectedVariant.title})` : product.name,
+          image: images[0] || product.image,
+          qty
+        });
+      }
       
       localStorage.setItem('solo_cart', JSON.stringify(cart));
       
@@ -106,7 +210,6 @@ if (!product) {
         addBtn.style.background = '';
       }, 1200);
 
-      // Call global function exposed from main.js to update UI
       if (window.updateCartUI) window.updateCartUI();
       if (window.openCartFn) window.openCartFn();
     });

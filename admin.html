@@ -34,10 +34,13 @@
       <header class="admin-header">
         <div style="display:flex;align-items:center;gap:0.75rem">
           <div class="admin-logo">Solo.</div>
-          <span class="admin-badge">Admin</span>
+          <span class="admin-badge">Shopify Admin</span>
         </div>
         <div style="display:flex;align-items:center;gap:1rem">
-          <a href="/" class="back-link">← Back to Store</a>
+          <a href="/" target="_blank" class="back-link">
+            <span>🏪 View Store</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </a>
           <button class="btn-logout" id="btn-logout">Logout</button>
         </div>
       </header>
@@ -55,98 +58,367 @@
         </button>
       </div>
 
-      <!-- Layout -->
-      <main class="admin-layout" id="panel-products">
+      <!-- ── PRODUCTS PANEL ─────────────────────────────────── -->
+      <main class="admin-panel" id="panel-products">
 
-        <!-- Form Panel -->
-        <aside class="form-panel">
-          <h2><span id="form-title">➕ Add New Product</span></h2>
-
-          <!-- 1-Click Importer Card -->
-          <div class="importer-card" id="importer-card">
-            <div class="importer-header">
-              <span class="importer-icon">⚡</span>
-              <div>
-                <h3>1-Click Product Importer</h3>
-                <p>Paste product link from Alibaba, AliExpress, Amazon, Shein, etc.</p>
-              </div>
+        <!-- 1. Products List View (Shopify Data Table) -->
+        <div id="products-list-view">
+          <div class="table-header-bar">
+            <div>
+              <h1 class="page-title">Products</h1>
+              <p class="page-subtitle" id="product-count-summary">Manage your catalog, inventory, and pricing</p>
             </div>
-            <div class="importer-body">
-              <div class="importer-input-group">
-                <input id="import-url-input" type="url" placeholder="https://www.alibaba.com/product-detail/..." autocomplete="off">
-                <button type="button" id="btn-import-product" class="btn-import">
-                  <span class="btn-import-icon">📥</span>
-                  <span class="btn-import-text">Import</span>
-                </button>
-              </div>
-              <div class="importer-status" id="importer-status" style="display:none"></div>
+            <div class="table-header-actions">
+              <button type="button" class="btn btn-secondary" id="btn-quick-import">⚡ 1-Click Import</button>
+              <button type="button" class="btn btn-primary" id="btn-add-product">
+                <span>➕ Add Product</span>
+              </button>
             </div>
           </div>
 
-          <div class="importer-divider">
-            <span>OR ENTER DETAILS</span>
+          <!-- Quick Importer Modal / Expandable Card -->
+          <div class="quick-import-drawer" id="quick-import-drawer" style="display:none;">
+            <div class="importer-card">
+              <div class="importer-header">
+                <span class="importer-icon">⚡</span>
+                <div>
+                  <h3>1-Click Product Importer</h3>
+                  <p>Paste product link from Alibaba, AliExpress, Amazon, Shein, etc. to auto-fill Shopify product.</p>
+                </div>
+                <button type="button" class="btn-close-drawer" id="btn-close-import-drawer">✕</button>
+              </div>
+              <div class="importer-body">
+                <div class="importer-input-group">
+                  <input id="import-url-input-quick" type="url" placeholder="https://www.alibaba.com/product-detail/..." autocomplete="off">
+                  <button type="button" id="btn-import-quick" class="btn-import">
+                    <span>📥 Import & Edit</span>
+                  </button>
+                </div>
+                <div class="importer-status" id="importer-status-quick" style="display:none"></div>
+              </div>
+            </div>
           </div>
 
-          <form id="product-form" novalidate>
-            <div class="form-group">
-              <label for="prod-name">Product Name *</label>
-              <input id="prod-name" type="text" placeholder="e.g. Solo Obsidian Backpack" required>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-              <div class="form-group">
-                <label for="prod-price">Price (USD) *</label>
-                <input id="prod-price" type="number" placeholder="0.00" min="0" step="0.01" required>
+          <!-- Table Filter & Search Controls -->
+          <div class="table-controls-card">
+            <div class="table-filters-row">
+              <div class="table-tabs">
+                <button class="table-tab active" data-filter="all">All</button>
+                <button class="table-tab" data-filter="active">Active</button>
+                <button class="table-tab" data-filter="draft">Draft</button>
+                <button class="table-tab" data-filter="low_stock">Low / Out of Stock</button>
               </div>
-              <div class="form-group">
-                <label for="prod-stock">Stock Quantity</label>
-                <input id="prod-stock" type="number" placeholder="Unlimited" min="0" step="1">
+              <div class="table-search-group">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="admin-product-search" placeholder="Filter products by title, category, or vendor...">
               </div>
             </div>
-            <div class="form-group">
-              <label for="prod-category">Category</label>
-              <input id="prod-category" type="text" placeholder="e.g. Bags, Watches, Accessories">
+
+            <!-- Products Table -->
+            <div class="table-responsive">
+              <table class="shopify-table">
+                <thead>
+                  <tr>
+                    <th style="width: 48px;">Image</th>
+                    <th>Product</th>
+                    <th>Status</th>
+                    <th>Inventory</th>
+                    <th>Category</th>
+                    <th>Vendor</th>
+                    <th>Price</th>
+                    <th style="text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="shopify-products-tbody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
             </div>
-            <div class="form-group">
-              <label for="prod-desc">Description</label>
-              <textarea id="prod-desc" placeholder="Describe the product…"></textarea>
+          </div>
+        </div>
+
+        <!-- 2. Shopify 2-Column Product Editor (Create / Edit View) -->
+        <div id="product-editor-view" style="display: none;">
+          
+          <!-- Sticky Top Bar -->
+          <div class="editor-top-bar">
+            <div class="editor-top-left">
+              <button type="button" class="btn-back-link" id="btn-back-to-products">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>Products</span>
+              </button>
+              <h1 class="editor-page-title" id="editor-title">Add product</h1>
+              <span class="badge-status-pill badge-draft" id="editor-status-pill">Draft</span>
             </div>
-            <div class="form-group">
-              <label>Product Image</label>
-              <div class="img-preview-container">
-                <img id="img-preview" src="" alt="Preview">
-                <div id="img-placeholder" class="img-placeholder">
-                  <span>🖼️</span><p>Image preview</p>
+            <div class="editor-top-right">
+              <button type="button" class="btn btn-ghost" id="btn-discard-product">Discard</button>
+              <button type="button" class="btn btn-primary" id="btn-save-product">Save Product</button>
+            </div>
+          </div>
+
+          <!-- 2-Column Shopify Layout -->
+          <div class="shopify-layout">
+
+            <!-- LEFT COLUMN (Main Content) -->
+            <div class="shopify-col-main">
+
+              <!-- Card 1: Title & Description -->
+              <div class="shopify-card">
+                <div class="form-group">
+                  <label for="sp-title">Title *</label>
+                  <input id="sp-title" class="sp-input-lg" type="text" placeholder="Short sleeve t-shirt, Solo Obsidian Backpack..." required>
+                </div>
+                <div class="form-group">
+                  <label for="sp-desc">Description</label>
+                  <div class="editor-toolbar">
+                    <button type="button" class="toolbar-btn" data-tag="bold" title="Bold"><b>B</b></button>
+                    <button type="button" class="toolbar-btn" data-tag="italic" title="Italic"><i>I</i></button>
+                    <button type="button" class="toolbar-btn" data-tag="list" title="Bullet List">• List</button>
+                    <button type="button" class="toolbar-btn" data-tag="clean" title="Clear Formatting">✕ Clean</button>
+                  </div>
+                  <textarea id="sp-desc" class="sp-textarea" placeholder="Describe features, materials, care instructions, and dimensions..."></textarea>
                 </div>
               </div>
-            </div>
-            <div class="form-group">
-              <label for="prod-image-url">Image URLs (comma separated for gallery)</label>
-              <textarea id="prod-image-url" placeholder="https://image1.jpg, https://image2.jpg..." style="min-height: 60px;"></textarea>
-            </div>
-            <div class="form-group">
-              <label>— or upload a primary file —</label>
-              <div class="file-drop-zone" id="drop-zone">
-                <input id="prod-image-file" type="file" accept="image/*">
-                📁 Click to upload from your computer
-              </div>
-            </div>
-            <button type="submit" id="submit-btn" class="btn btn-primary pw-btn">Add Product</button>
-            <button type="button" id="cancel-btn" class="btn btn-ghost pw-btn" style="display:none">Cancel Edit</button>
-          </form>
-        </aside>
 
-        <!-- Product List -->
-        <section class="products-panel">
-          <h2>
-            All Products
-            <span class="product-count" id="product-count">0 products</span>
-          </h2>
-          <div class="admin-product-list" id="admin-product-list"></div>
-        </section>
+              <!-- Card 2: Media Gallery -->
+              <div class="shopify-card">
+                <div class="card-header-flex">
+                  <div>
+                    <h3>Media</h3>
+                    <p class="card-subtitle">Add images, videos, or 3D models of your product</p>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-ghost" id="btn-add-media-url">+ Add from URL</button>
+                </div>
+
+                <!-- URL Input Bar (collapsible) -->
+                <div id="media-url-wrap" style="display:none; margin-bottom: 1rem;">
+                  <div class="importer-input-group">
+                    <input id="sp-media-url-input" type="url" placeholder="https://example.com/image.jpg">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-confirm-media-url">Add Image</button>
+                  </div>
+                </div>
+
+                <!-- Dropzone -->
+                <div class="shopify-dropzone" id="shopify-dropzone">
+                  <input type="file" id="sp-file-input" multiple accept="image/*" style="display:none;">
+                  <div class="dropzone-content">
+                    <div class="dropzone-icon">🖼️</div>
+                    <div class="dropzone-text">
+                      <span class="dropzone-highlight">Upload new</span> or drag and drop images
+                    </div>
+                    <div class="dropzone-sub">Accepts JPG, PNG, WEBP, GIF</div>
+                  </div>
+                </div>
+
+                <!-- Media Gallery Grid -->
+                <div class="media-grid" id="sp-media-grid">
+                  <!-- Rendered dynamically with Primary Badge & Remove buttons -->
+                </div>
+              </div>
+
+              <!-- Card 3: Pricing & Margin Calculator -->
+              <div class="shopify-card">
+                <h3>Pricing</h3>
+                <div class="grid-3-col">
+                  <div class="form-group">
+                    <label for="sp-price">Price (USD) *</label>
+                    <div class="input-prefix-wrap">
+                      <span class="input-prefix">$</span>
+                      <input id="sp-price" type="number" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="sp-compare-price">Compare-at price</label>
+                    <div class="input-prefix-wrap">
+                      <span class="input-prefix">$</span>
+                      <input id="sp-compare-price" type="number" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <small class="field-hint">Original strikethrough price</small>
+                  </div>
+                  <div class="form-group">
+                    <label for="sp-cost">Cost per item</label>
+                    <div class="input-prefix-wrap">
+                      <span class="input-prefix">$</span>
+                      <input id="sp-cost" type="number" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <small class="field-hint">Customers won't see this</small>
+                  </div>
+                </div>
+
+                <!-- Profit & Margin Live Meter -->
+                <div class="pricing-metrics-bar" id="pricing-metrics">
+                  <div class="metric-box">
+                    <span class="metric-label">Profit</span>
+                    <span class="metric-val" id="metric-profit">$0.00</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="metric-label">Margin</span>
+                    <span class="metric-val" id="metric-margin">0%</span>
+                  </div>
+                  <div class="metric-box" style="flex: 2;">
+                    <span class="metric-label">Sale Discount</span>
+                    <span class="metric-val text-success" id="metric-discount">No discount</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 4: Inventory & Tracking -->
+              <div class="shopify-card">
+                <h3>Inventory</h3>
+                <div class="grid-2-col">
+                  <div class="form-group">
+                    <label for="sp-sku">SKU (Stock Keeping Unit)</label>
+                    <input id="sp-sku" type="text" placeholder="e.g. OBS-BAG-001">
+                  </div>
+                  <div class="form-group">
+                    <label for="sp-barcode">Barcode (ISBN, UPC, GTIN)</label>
+                    <input id="sp-barcode" type="text" placeholder="e.g. 123456789012">
+                  </div>
+                </div>
+                <div class="form-checkbox-row">
+                  <input type="checkbox" id="sp-track-qty" checked>
+                  <label for="sp-track-qty">Track quantity</label>
+                </div>
+                <div class="form-group" id="sp-qty-group" style="margin-top: 1rem; max-width: 240px;">
+                  <label for="sp-stock">Quantity Available</label>
+                  <input id="sp-stock" type="number" min="0" step="1" placeholder="0">
+                </div>
+                <div class="form-checkbox-row" style="margin-top: 0.75rem;">
+                  <input type="checkbox" id="sp-continue-selling">
+                  <label for="sp-continue-selling">Continue selling when out of stock</label>
+                </div>
+              </div>
+
+              <!-- Card 5: Variants & Options (Shopify Style) -->
+              <div class="shopify-card">
+                <div class="card-header-flex">
+                  <div>
+                    <h3>Variants</h3>
+                    <p class="card-subtitle">Add variations like size, color, or material</p>
+                  </div>
+                  <div class="form-checkbox-row">
+                    <input type="checkbox" id="sp-has-variants">
+                    <label for="sp-has-variants">This product has options</label>
+                  </div>
+                </div>
+
+                <!-- Variants Builder Panel -->
+                <div id="sp-variants-builder" style="display:none; margin-top: 1.25rem;">
+                  <div id="sp-options-list">
+                    <!-- Option rows (e.g. Size, Color) -->
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-add-option">+ Add another option</button>
+
+                  <!-- Variant Matrix Table -->
+                  <div class="variant-matrix-wrap" style="margin-top: 1.5rem;">
+                    <h4>Variant Combinations</h4>
+                    <div class="table-responsive">
+                      <table class="shopify-table variant-table">
+                        <thead>
+                          <tr>
+                            <th>Variant</th>
+                            <th style="width: 130px;">Price ($)</th>
+                            <th style="width: 120px;">Quantity</th>
+                            <th style="width: 160px;">SKU</th>
+                          </tr>
+                        </thead>
+                        <tbody id="sp-variants-tbody">
+                          <!-- Auto-generated variant combinations -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN (Sidebar Organization) -->
+            <div class="shopify-col-sidebar">
+
+              <!-- Sidebar Card 1: Status -->
+              <div class="shopify-card">
+                <h3>Product Status</h3>
+                <div class="form-group">
+                  <select id="sp-status" class="sp-select">
+                    <option value="active">Active (Visible in Store)</option>
+                    <option value="draft">Draft (Hidden from Store)</option>
+                  </select>
+                </div>
+                <div class="publishing-info">
+                  <span class="pub-icon">🌐</span>
+                  <div>
+                    <div class="pub-title">Online Store</div>
+                    <div class="pub-desc" id="pub-desc-text">Will be published immediately on adounas.com</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sidebar Card 2: ⚡ 1-Click Importer in Editor -->
+              <div class="shopify-card importer-sidebar-card">
+                <div class="importer-header" style="margin-bottom:0.5rem;">
+                  <span class="importer-icon">⚡</span>
+                  <div>
+                    <h3>1-Click Importer</h3>
+                    <p>Auto-fill from Alibaba, Amazon, AliExpress</p>
+                  </div>
+                </div>
+                <div class="importer-input-group" style="flex-direction:column; gap:0.5rem;">
+                  <input id="import-url-input-side" type="url" placeholder="Paste link..." autocomplete="off">
+                  <button type="button" id="btn-import-side" class="btn-import" style="width:100%; justify-content:center;">
+                    <span>📥 Auto-Fill Form</span>
+                  </button>
+                </div>
+                <div class="importer-status" id="importer-status-side" style="display:none"></div>
+              </div>
+
+              <!-- Sidebar Card 3: Product Organization -->
+              <div class="shopify-card">
+                <h3>Product Organization</h3>
+                
+                <div class="form-group">
+                  <label for="sp-category">Product Category</label>
+                  <input id="sp-category" type="text" placeholder="e.g. Bags, Watches, Clothing">
+                </div>
+
+                <div class="form-group">
+                  <label for="sp-product-type">Product Type</label>
+                  <input id="sp-product-type" type="text" placeholder="e.g. Backpack, Chronograph">
+                </div>
+
+                <div class="form-group">
+                  <label for="sp-vendor">Vendor / Supplier</label>
+                  <input id="sp-vendor" type="text" placeholder="e.g. Alibaba, In-House, Solo">
+                </div>
+
+                <div class="form-group">
+                  <label>Tags</label>
+                  <div class="tag-input-wrap" id="sp-tag-container">
+                    <div id="sp-tags-pills" class="tags-pills-wrap"></div>
+                    <input id="sp-tag-input" type="text" placeholder="Add tag and press Enter...">
+                  </div>
+                  <small class="field-hint">Press Enter or comma to create a tag</small>
+                </div>
+              </div>
+
+              <!-- Sidebar Card 4: Search Engine / SEO Preview -->
+              <div class="shopify-card">
+                <h3>Search Engine Preview</h3>
+                <div class="seo-preview-box">
+                  <div class="seo-title" id="seo-preview-title">Solo Product Title</div>
+                  <div class="seo-url" id="seo-preview-url">https://adounas.com/product.html?id=...</div>
+                  <div class="seo-desc" id="seo-preview-desc">Describe your product to improve your rankings and attract buyers...</div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
 
       </main>
 
-      <!-- Messages Panel -->
+      <!-- ── MESSAGES PANEL ─────────────────────────────────── -->
       <section class="admin-messages-panel" id="panel-messages" style="display:none">
         <div class="admin-chat-list" id="admin-chat-list">
           <div class="admin-chat-empty">No conversations yet.</div>
@@ -163,7 +435,7 @@
         </div>
       </section>
 
-      <!-- Orders Panel -->
+      <!-- ── ORDERS PANEL ───────────────────────────────────── -->
       <section class="admin-orders-panel" id="panel-orders" style="display:none">
         
         <!-- Telegram Alerts Banner -->
@@ -190,7 +462,6 @@
         </div>
         <div id="orders-list" class="orders-list"><p style="color:#6B7280;padding:2rem">Loading orders...</p></div>
       </section>
-
 
     </div>
 

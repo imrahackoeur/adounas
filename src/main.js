@@ -81,6 +81,7 @@ function renderProducts() {
   if (!productGrid) return; // Only on index
   const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
   let filtered = products.filter(p => {
+    if (p.status === 'draft') return false;
     const matchCat   = activeCategory === 'all' || p.category === activeCategory;
     const matchQuery = !query || p.name.toLowerCase().includes(query) || (p.desc || '').toLowerCase().includes(query);
     return matchCat && matchQuery;
@@ -92,11 +93,15 @@ function renderProducts() {
     return;
   }
 
-  productGrid.innerHTML = filtered.map(p => `
+  productGrid.innerHTML = filtered.map(p => {
+    const isSale = p.comparePrice && Number(p.comparePrice) > Number(p.price);
+    const compareHtml = isSale ? `<span style="text-decoration:line-through; color:var(--text-light); font-size:0.85rem; margin-left:0.35rem;">$${Number(p.comparePrice).toFixed(2)}</span>` : '';
+
+    return `
     <div class="product-card" data-id="${p.id}" tabindex="0" role="button" aria-label="View ${p.name}">
       <div class="img-container">
-        ${p.stock === 0 ? `<div class="img-badge out-of-stock-badge" style="background:var(--danger); color:white;">Out of Stock</div>` : (p.category ? `<div class="img-badge">${p.category}</div>` : '')}
-        <img src="${p.image || ''}" alt="${p.name}" class="product-image"
+        ${p.stock === 0 ? `<div class="img-badge out-of-stock-badge" style="background:var(--danger); color:white;">Out of Stock</div>` : (isSale ? `<div class="img-badge" style="background:#6D28D9; color:white; font-weight:700;">SALE</div>` : (p.category ? `<div class="img-badge">${p.category}</div>` : ''))}
+        <img src="${(p.images && p.images[0]) || p.image || ''}" alt="${p.name}" class="product-image"
           onerror="this.src='https://placehold.co/600x400/F0EFFF/4F46E5?text=Solo'" style="${p.stock === 0 ? 'opacity: 0.5; filter: grayscale(1);' : ''}">
       </div>
       <div class="product-info">
@@ -104,11 +109,12 @@ function renderProducts() {
         <h3 class="product-title">${p.name}</h3>
         <p class="product-desc">${p.desc || ''}</p>
         <div class="product-footer">
-          <div class="product-price">$${Number(p.price).toFixed(2)}</div>
+          <div class="product-price">$${Number(p.price).toFixed(2)} ${compareHtml}</div>
           ${p.stock === 0 ? `<button class="add-to-cart-btn disabled" disabled style="background:var(--border); color:var(--text-muted); cursor:not-allowed;">Sold Out</button>` : `<button class="add-to-cart-btn" data-id="${p.id}">+ Cart</button>`}
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   // Card click → product detail page
   productGrid.querySelectorAll('.product-card').forEach(card => {

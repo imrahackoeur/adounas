@@ -98,9 +98,24 @@
 
         <!-- Right: Info & Actions -->
         <div class="pdp-info">
-          <div class="pdp-category" id="pdp-category"></div>
+          <div class="pdp-meta-top">
+            <span class="pdp-category" id="pdp-category"></span>
+            <span class="pdp-vendor" id="pdp-vendor"></span>
+          </div>
           <h1 class="pdp-title" id="pdp-title"></h1>
-          <div class="pdp-price" id="pdp-price"></div>
+          <div class="pdp-sku" id="pdp-sku" style="display:none"></div>
+          
+          <div class="pdp-price-wrap">
+            <div class="pdp-price" id="pdp-price"></div>
+            <div class="pdp-compare-price" id="pdp-compare-price" style="display:none;"></div>
+            <span class="pdp-sale-badge" id="pdp-sale-badge" style="display:none;">SALE</span>
+          </div>
+
+          <!-- Variants Selector (Shopify Options) -->
+          <div class="pdp-variants-container" id="pdp-variants-container" style="display:none;">
+            <!-- Rendered by JS: Size / Color option selectors -->
+          </div>
+
           <p class="pdp-desc" id="pdp-desc"></p>
           
           <div class="pdp-actions">

@@ -34,6 +34,7 @@ function unlock(token) {
   if (token) sessionStorage.setItem(TOKEN_KEY, token);
   pwGate.style.display = 'none';
   adminContent.style.display = 'block';
+  renderProductsTable();
 }
 
 function lock() {
@@ -91,7 +92,6 @@ pwForm.addEventListener('submit', async e => {
     if (res.ok && data.ok) {
       pwError.textContent = '';
       unlock(data.token);
-      // Load initial data
       if (tabOrders.classList.contains('active')) loadOrders();
       if (tabMessages.classList.contains('active')) loadChatList();
     } else {
@@ -109,14 +109,12 @@ pwForm.addEventListener('submit', async e => {
   }
 });
 
-// Add shake keyframe
 const style = document.createElement('style');
 style.textContent = `@keyframes shake {
   0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 60%{transform:translateX(8px)}
 }`;
 document.head.appendChild(style);
 
-// Logout
 btnLogout.addEventListener('click', async () => {
   try {
     await fetch('/api/admin/logout', {
@@ -127,268 +125,877 @@ btnLogout.addEventListener('click', async () => {
   lock();
 });
 
-// ── Store Helpers ─────────────────────────────────────────────────────────────
-function loadProducts() { return JSON.parse(localStorage.getItem('solo_products') || '[]'); }
-function saveProducts(p) { localStorage.setItem('solo_products', JSON.stringify(p)); }
-
-// ── State ─────────────────────────────────────────────────────────────────────
-let products  = loadProducts();
-let editingId = null;
-
-// ── DOM Refs ──────────────────────────────────────────────────────────────────
-const form           = document.getElementById('product-form');
-const nameInput      = document.getElementById('prod-name');
-const priceInput     = document.getElementById('prod-price');
-const stockInput     = document.getElementById('prod-stock');
-const categoryInput  = document.getElementById('prod-category');
-const descInput      = document.getElementById('prod-desc');
-const imageUrlInput  = document.getElementById('prod-image-url');
-const fileInput      = document.getElementById('prod-image-file');
-const imgPreview     = document.getElementById('img-preview');
-const imgPlaceholder = document.getElementById('img-placeholder');
-const formTitle      = document.getElementById('form-title');
-const submitBtn      = document.getElementById('submit-btn');
-const cancelBtn      = document.getElementById('cancel-btn');
-const productList    = document.getElementById('admin-product-list');
-const productCount   = document.getElementById('product-count');
-
-// ── 1-Click Product Importer ──────────────────────────────────────────────────
-const importUrlInput = document.getElementById('import-url-input');
-const btnImportProd  = document.getElementById('btn-import-product');
-const importStatus   = document.getElementById('importer-status');
-
-function setImportStatus(msg, type) {
-  if (!importStatus) return;
-  importStatus.textContent = msg;
-  importStatus.className = `importer-status ${type}`;
-  importStatus.style.display = 'block';
-}
-
-if (btnImportProd) {
-  btnImportProd.addEventListener('click', async () => {
-    const url = (importUrlInput.value || '').trim();
-    if (!url) {
-      setImportStatus('Please enter a product URL first.', 'error');
-      importUrlInput.focus();
-      return;
-    }
-
-    if (!/^https?:\/\//i.test(url)) {
-      setImportStatus('Please enter a valid URL starting with http:// or https://', 'error');
-      return;
-    }
-
-    setImportStatus('⏳ Fetching product details from supplier...', 'loading');
-    btnImportProd.disabled = true;
-
-    try {
-      const res = await adminFetch('/api/admin/import-product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || 'Failed to extract product data.');
-      }
-
-      const p = data.product;
-
-      // Populate form
-      if (p.name) nameInput.value = p.name;
-      if (p.price) priceInput.value = p.price;
-      if (p.category) categoryInput.value = p.category;
-      if (p.desc) descInput.value = p.desc;
-
-      const imgs = (p.images && p.images.length > 0) ? p.images.join(', ') : (p.image || '');
-      imageUrlInput.value = imgs;
-
-      if (p.image) {
-        updatePreview(p.image);
-      } else if (p.images && p.images.length > 0) {
-        updatePreview(p.images[0]);
-      }
-
-      setImportStatus(`✅ Imported! Found: "${(p.name || 'Product').substring(0, 45)}..." — review and click Add Product.`, 'success');
-      showToast('🎉 Product imported! Review details & save.');
-
-      // Scroll smoothly to form
-      form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } catch (err) {
-      console.error('Import error:', err);
-      setImportStatus(`❌ Import failed: ${err.message || 'Could not fetch page'}. Check link or enter details manually.`, 'error');
-    } finally {
-      btnImportProd.disabled = false;
-    }
-  });
-
-  importUrlInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      btnImportProd.click();
-    }
-  });
-}
-
-// ── Toast ─────────────────────────────────────────────────────────────────────
+// ── Toast Notification ────────────────────────────────────────────────────────
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className   = `toast ${type}`;
   requestAnimationFrame(() => t.classList.add('show'));
-  setTimeout(() => t.classList.remove('show'), 2800);
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ── Image Preview ─────────────────────────────────────────────────────────────
-function updatePreview(src) {
-  if (src) {
-    imgPreview.src = src;
-    imgPreview.style.display = 'block';
-    imgPlaceholder.style.display = 'none';
-  } else {
-    imgPreview.style.display = 'none';
-    imgPlaceholder.style.display = 'flex';
-  }
+// ── Store Helpers ─────────────────────────────────────────────────────────────
+function loadProducts() {
+  return JSON.parse(localStorage.getItem('solo_products') || '[]');
+}
+function saveProducts(p) {
+  localStorage.setItem('solo_products', JSON.stringify(p));
 }
 
-imageUrlInput.addEventListener('input', () => {
-  const val = imageUrlInput.value.split(',')[0].trim();
-  updatePreview(val);
-});
+let products = loadProducts();
+let editingId = null;
+let editorImages = [];
+let editorTags = [];
+let editorOptions = []; // [{ name: 'Size', values: ['S', 'M', 'L'] }]
+let editorVariants = []; // [{ title: 'S / Black', price: 100, stock: 10, sku: '' }]
+let currentTableFilter = 'all';
 
-fileInput.addEventListener('change', () => {
-  const file = fileInput.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => { imageUrlInput.value = ''; updatePreview(e.target.result); };
-  reader.readAsDataURL(file);
-});
+// ── DOM References ────────────────────────────────────────────────────────────
+// Views
+const productsListView   = document.getElementById('products-list-view');
+const productEditorView  = document.getElementById('product-editor-view');
+const btnAddProduct      = document.getElementById('btn-add-product');
+const btnBackToProducts  = document.getElementById('btn-back-to-products');
+const btnSaveProduct     = document.getElementById('btn-save-product');
+const btnDiscardProduct  = document.getElementById('btn-discard-product');
+const editorTitle        = document.getElementById('editor-title');
+const editorStatusPill   = document.getElementById('editor-status-pill');
 
-document.getElementById('drop-zone').addEventListener('click', () => fileInput.click());
+// Table DOM
+const shopifyProductsTbody = document.getElementById('shopify-products-tbody');
+const adminProductSearch   = document.getElementById('admin-product-search');
+const productCountSummary  = document.getElementById('product-count-summary');
+const tableTabs            = document.querySelectorAll('.table-tab');
 
-// ── Render List ───────────────────────────────────────────────────────────────
-function renderList() {
-  productCount.textContent = `${products.length} product${products.length !== 1 ? 's' : ''}`;
+// Quick Importer Drawer
+const btnQuickImport       = document.getElementById('btn-quick-import');
+const quickImportDrawer    = document.getElementById('quick-import-drawer');
+const btnCloseImportDrawer = document.getElementById('btn-close-import-drawer');
+const importUrlInputQuick  = document.getElementById('import-url-input-quick');
+const btnImportQuick       = document.getElementById('btn-import-quick');
+const importerStatusQuick  = document.getElementById('importer-status-quick');
 
-  if (products.length === 0) {
-    productList.innerHTML = `<div class="empty-state">
-      <span class="icon">📦</span>
-      <p>No products yet. Add your first one using the form!</p>
-    </div>`;
+// Editor Form Fields
+const spTitle           = document.getElementById('sp-title');
+const spDesc            = document.getElementById('sp-desc');
+const spPrice           = document.getElementById('sp-price');
+const spComparePrice    = document.getElementById('sp-compare-price');
+const spCost            = document.getElementById('sp-cost');
+const metricProfit      = document.getElementById('metric-profit');
+const metricMargin      = document.getElementById('metric-margin');
+const metricDiscount    = document.getElementById('metric-discount');
+
+const spSku             = document.getElementById('sp-sku');
+const spBarcode         = document.getElementById('sp-barcode');
+const spTrackQty        = document.getElementById('sp-track-qty');
+const spStock           = document.getElementById('sp-stock');
+const spQtyGroup        = document.getElementById('sp-qty-group');
+const spContinueSelling = document.getElementById('sp-continue-selling');
+
+const spHasVariants     = document.getElementById('sp-has-variants');
+const spVariantsBuilder = document.getElementById('sp-variants-builder');
+const spOptionsList     = document.getElementById('sp-options-list');
+const btnAddOption      = document.getElementById('btn-add-option');
+const spVariantsTbody   = document.getElementById('sp-variants-tbody');
+
+const spStatus          = document.getElementById('sp-status');
+const spCategory        = document.getElementById('sp-category');
+const spProductType     = document.getElementById('sp-product-type');
+const spVendor          = document.getElementById('sp-vendor');
+const spTagContainer    = document.getElementById('sp-tag-container');
+const spTagsPills       = document.getElementById('sp-tags-pills');
+const spTagInput        = document.getElementById('sp-tag-input');
+
+// Media DOM
+const shopifyDropzone   = document.getElementById('shopify-dropzone');
+const spFileInput       = document.getElementById('sp-file-input');
+const btnAddMediaUrl    = document.getElementById('btn-add-media-url');
+const mediaUrlWrap      = document.getElementById('media-url-wrap');
+const spMediaUrlInput   = document.getElementById('sp-media-url-input');
+const btnConfirmMediaUrl= document.getElementById('btn-confirm-media-url');
+const spMediaGrid       = document.getElementById('sp-media-grid');
+
+// SEO Preview
+const seoPreviewTitle   = document.getElementById('seo-preview-title');
+const seoPreviewUrl     = document.getElementById('seo-preview-url');
+const seoPreviewDesc    = document.getElementById('seo-preview-desc');
+
+// Sidebar Importer
+const importUrlInputSide= document.getElementById('import-url-input-side');
+const btnImportSide     = document.getElementById('btn-import-side');
+const importerStatusSide= document.getElementById('importer-status-side');
+
+// ── 1. PRODUCTS LIST VIEW (Shopify Table) ─────────────────────────────────────
+function renderProductsTable() {
+  products = loadProducts();
+  const search = (adminProductSearch.value || '').trim().toLowerCase();
+
+  let filtered = products.filter(p => {
+    // Status filter tab
+    if (currentTableFilter === 'active' && p.status === 'draft') return false;
+    if (currentTableFilter === 'draft' && p.status !== 'draft') return false;
+    if (currentTableFilter === 'low_stock') {
+      const isLow = (p.stock !== undefined && p.stock !== null && p.stock <= 5);
+      if (!isLow) return false;
+    }
+    // Search query
+    if (search) {
+      const matchName = (p.name || '').toLowerCase().includes(search);
+      const matchCat  = (p.category || '').toLowerCase().includes(search);
+      const matchVen  = (p.vendor || '').toLowerCase().includes(search);
+      const matchSku  = (p.sku || '').toLowerCase().includes(search);
+      if (!matchName && !matchCat && !matchVen && !matchSku) return false;
+    }
+    return true;
+  });
+
+  productCountSummary.textContent = `${products.length} product${products.length !== 1 ? 's' : ''} total (${filtered.length} showing)`;
+
+  if (filtered.length === 0) {
+    shopifyProductsTbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align:center; padding: 3rem 1rem; color: var(--text-muted);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
+          <p style="font-weight: 600; font-size: 1rem;">No products found</p>
+          <p style="font-size: 0.85rem; margin-top: 0.25rem;">Try adjusting your search or click "+ Add Product" to create one.</p>
+        </td>
+      </tr>
+    `;
     return;
   }
 
-  productList.innerHTML = products.map(p => `
-    <div class="admin-product-card">
-      <img src="${p.image || ''}" alt="${p.name}"
-           onerror="this.src='https://placehold.co/76x76/F0EFFF/4F46E5?text=?'">
-      <div class="admin-product-info">
-        ${p.category ? `<div class="admin-product-cat">${p.category}</div>` : ''}
-        <div class="admin-product-name">${p.name}</div>
-        <div class="admin-product-price">$${Number(p.price).toFixed(2)}</div>
-        <div class="admin-product-desc">${p.desc || ''}</div>
-        <div style="font-size: 0.8rem; margin-top: 0.4rem; font-weight: 600; color: ${p.stock === 0 ? 'var(--danger)' : 'var(--success)'}">
-          ${p.stock !== undefined && p.stock !== null && p.stock !== '' ? `Stock: ${p.stock}` : 'Stock: Unlimited'}
+  shopifyProductsTbody.innerHTML = filtered.map(p => {
+    const isDraft = (p.status === 'draft');
+    const isOutOfStock = (p.stock !== undefined && p.stock !== null && p.stock === 0);
+    const isLowStock = (p.stock !== undefined && p.stock !== null && p.stock > 0 && p.stock <= 5);
+    
+    let inventoryBadge = '';
+    if (p.stock === null || p.stock === undefined || p.stock === '') {
+      inventoryBadge = `<span style="color: var(--text-muted); font-size:0.82rem;">Not tracked</span>`;
+    } else if (isOutOfStock) {
+      inventoryBadge = `<span class="badge-status-pill badge-stock-out">0 in stock</span>`;
+    } else if (isLowStock) {
+      inventoryBadge = `<span class="badge-status-pill badge-stock-low">${p.stock} in stock</span>`;
+    } else {
+      inventoryBadge = `<span style="font-weight:600; font-size:0.85rem;">${p.stock} in stock</span>`;
+    }
+
+    const priceFormatted = `$${Number(p.price || 0).toFixed(2)}`;
+    const compareFormatted = p.comparePrice ? `<span style="text-decoration:line-through; color:var(--text-light); font-size:0.75rem; margin-left:4px;">$${Number(p.comparePrice).toFixed(2)}</span>` : '';
+    const saleTag = (p.comparePrice && Number(p.comparePrice) > Number(p.price)) ? `<span class="badge-status-pill badge-sale" style="font-size:0.65rem; padding:0.1rem 0.35rem; margin-left:4px;">SALE</span>` : '';
+
+    const firstImage = (p.images && p.images.length > 0) ? p.images[0] : (p.image || '');
+
+    return `
+      <tr>
+        <td>
+          <img src="${firstImage}" alt="${p.name}" class="table-prod-img" onerror="this.src='https://placehold.co/88x88/F0EFFF/4F46E5?text=?'">
+        </td>
+        <td>
+          <div class="table-prod-title">
+            <a href="#" class="prod-link" data-id="${p.id}" style="color:var(--text);">${p.name}</a>
+          </div>
+          <div class="table-prod-sub">${p.productType || p.sku || 'Solo Store'}</div>
+        </td>
+        <td>
+          <span class="badge-status-pill ${isDraft ? 'badge-draft' : 'badge-active'}">
+            ${isDraft ? 'Draft' : 'Active'}
+          </span>
+        </td>
+        <td>${inventoryBadge}</td>
+        <td>${p.category || '—'}</td>
+        <td>${p.vendor || '—'}</td>
+        <td>
+          <div style="font-weight: 700;">${priceFormatted} ${compareFormatted} ${saleTag}</div>
+        </td>
+        <td>
+          <div class="table-actions-cell">
+            <button type="button" class="btn-table-action btn-edit-prod" data-id="${p.id}" title="Edit product">Edit</button>
+            <button type="button" class="btn-table-action btn-dup-prod" data-id="${p.id}" title="Duplicate product">Duplicate</button>
+            <a href="/product.html?id=${p.id}" target="_blank" class="btn-table-action" title="View in storefront">View ↗</a>
+            <button type="button" class="btn-table-action btn-table-delete btn-del-prod" data-id="${p.id}" title="Delete product">✕</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Attach Table Action Listeners
+  shopifyProductsTbody.querySelectorAll('.btn-edit-prod, .prod-link').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      openProductEditor(parseInt(btn.dataset.id));
+    });
+  });
+
+  shopifyProductsTbody.querySelectorAll('.btn-dup-prod').forEach(btn => {
+    btn.addEventListener('click', () => duplicateProduct(parseInt(btn.dataset.id)));
+  });
+
+  shopifyProductsTbody.querySelectorAll('.btn-del-prod').forEach(btn => {
+    btn.addEventListener('click', () => deleteProduct(parseInt(btn.dataset.id)));
+  });
+}
+
+// Table Search & Filter Handlers
+adminProductSearch.addEventListener('input', renderProductsTable);
+
+tableTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tableTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTableFilter = tab.dataset.filter;
+    renderProductsTable();
+  });
+});
+
+// Quick Importer Drawer toggle
+btnQuickImport.addEventListener('click', () => {
+  quickImportDrawer.style.display = quickImportDrawer.style.display === 'none' ? 'block' : 'none';
+  if (quickImportDrawer.style.display === 'block') {
+    importUrlInputQuick.focus();
+  }
+});
+
+btnCloseImportDrawer.addEventListener('click', () => {
+  quickImportDrawer.style.display = 'none';
+});
+
+// ── 2. SHOPIFY PRODUCT EDITOR ────────────────────────────────────────────────
+function openProductEditor(id = null) {
+  editingId = id;
+  productsListView.style.display = 'none';
+  productEditorView.style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (id) {
+    const p = products.find(prod => prod.id === id);
+    if (!p) return;
+
+    editorTitle.textContent = `Edit product`;
+    editorStatusPill.textContent = (p.status === 'draft' ? 'Draft' : 'Active');
+    editorStatusPill.className = `badge-status-pill ${p.status === 'draft' ? 'badge-draft' : 'badge-active'}`;
+
+    spTitle.value = p.name || '';
+    spDesc.value  = p.desc || '';
+    spPrice.value = p.price !== undefined ? p.price : '';
+    spComparePrice.value = p.comparePrice !== undefined ? p.comparePrice : '';
+    spCost.value  = p.cost !== undefined ? p.cost : '';
+
+    spSku.value   = p.sku || '';
+    spBarcode.value = p.barcode || '';
+    spTrackQty.checked = p.trackQuantity !== false;
+    spStock.value = (p.stock !== undefined && p.stock !== null) ? p.stock : '';
+    spContinueSelling.checked = !!p.continueSelling;
+
+    spStatus.value = p.status || 'active';
+    spCategory.value = p.category || '';
+    spProductType.value = p.productType || '';
+    spVendor.value = p.vendor || '';
+
+    editorImages = (p.images && p.images.length > 0) ? [...p.images] : (p.image ? [p.image] : []);
+    editorTags   = Array.isArray(p.tags) ? [...p.tags] : [];
+
+    spHasVariants.checked = !!p.hasVariants;
+    editorOptions  = Array.isArray(p.options) ? JSON.parse(JSON.stringify(p.options)) : [];
+    editorVariants = Array.isArray(p.variants) ? JSON.parse(JSON.stringify(p.variants)) : [];
+  } else {
+    // New product defaults
+    editorTitle.textContent = 'Add product';
+    editorStatusPill.textContent = 'Active';
+    editorStatusPill.className = 'badge-status-pill badge-active';
+
+    spTitle.value = '';
+    spDesc.value = '';
+    spPrice.value = '';
+    spComparePrice.value = '';
+    spCost.value = '';
+    spSku.value = '';
+    spBarcode.value = '';
+    spTrackQty.checked = true;
+    spStock.value = '10';
+    spContinueSelling.checked = false;
+    spStatus.value = 'active';
+    spCategory.value = '';
+    spProductType.value = '';
+    spVendor.value = 'Solo Store';
+
+    editorImages = [];
+    editorTags = [];
+    spHasVariants.checked = false;
+    editorOptions = [];
+    editorVariants = [];
+  }
+
+  // Update UI components
+  renderMediaGrid();
+  renderTags();
+  renderVariantsUI();
+  calculatePricingMetrics();
+  updateSeoPreview();
+  toggleQtyGroup();
+}
+
+function closeProductEditor() {
+  editingId = null;
+  productEditorView.style.display = 'none';
+  productsListView.style.display = 'block';
+  renderProductsTable();
+}
+
+btnAddProduct.addEventListener('click', () => openProductEditor(null));
+btnBackToProducts.addEventListener('click', closeProductEditor);
+btnDiscardProduct.addEventListener('click', () => {
+  if (confirm('Discard unsaved changes and go back to products?')) {
+    closeProductEditor();
+  }
+});
+
+// ── 3. PRICING & PROFIT CALCULATOR ───────────────────────────────────────────
+function calculatePricingMetrics() {
+  const price = parseFloat(spPrice.value) || 0;
+  const compare = parseFloat(spComparePrice.value) || 0;
+  const cost = parseFloat(spCost.value) || 0;
+
+  // Profit & Margin
+  if (price > 0 && cost > 0) {
+    const profit = price - cost;
+    const margin = (profit / price) * 100;
+    metricProfit.textContent = `$${profit.toFixed(2)}`;
+    metricProfit.className = profit >= 0 ? 'metric-val text-success' : 'metric-val text-danger';
+    metricMargin.textContent = `${margin.toFixed(1)}%`;
+  } else {
+    metricProfit.textContent = '$0.00';
+    metricMargin.textContent = '0%';
+  }
+
+  // Sale Discount
+  if (compare > price && price > 0) {
+    const discountAmt = compare - price;
+    const discountPct = Math.round((discountAmt / compare) * 100);
+    metricDiscount.textContent = `${discountPct}% OFF (Save $${discountAmt.toFixed(2)})`;
+    metricDiscount.className = 'metric-val text-success';
+  } else {
+    metricDiscount.textContent = 'No discount';
+    metricDiscount.className = 'metric-val';
+  }
+}
+
+spPrice.addEventListener('input', () => { calculatePricingMetrics(); updateVariantsPrice(); });
+spComparePrice.addEventListener('input', calculatePricingMetrics);
+spCost.addEventListener('input', calculatePricingMetrics);
+
+// ── 4. MEDIA GALLERY & DROPZONE ───────────────────────────────────────────────
+function renderMediaGrid() {
+  if (editorImages.length === 0) {
+    spMediaGrid.innerHTML = '';
+    return;
+  }
+
+  spMediaGrid.innerHTML = editorImages.map((img, idx) => `
+    <div class="media-card" data-index="${idx}">
+      <img src="${img}" alt="Media ${idx}" onerror="this.src='https://placehold.co/200x200/F0EFFF/4F46E5?text=?'">
+      ${idx === 0 ? '<span class="media-badge-primary">Primary</span>' : ''}
+      <button type="button" class="btn-media-delete" data-index="${idx}" title="Remove image">✕</button>
+    </div>
+  `).join('');
+
+  spMediaGrid.querySelectorAll('.btn-media-delete').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const index = parseInt(btn.dataset.index);
+      editorImages.splice(index, 1);
+      renderMediaGrid();
+    });
+  });
+}
+
+// Click Dropzone to open file dialog
+shopifyDropzone.addEventListener('click', () => spFileInput.click());
+
+// Handle local file uploads
+spFileInput.addEventListener('change', () => {
+  const files = Array.from(spFileInput.files || []);
+  if (files.length === 0) return;
+
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      editorImages.push(e.target.result);
+      renderMediaGrid();
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+// Drag & drop support
+shopifyDropzone.addEventListener('dragover', e => {
+  e.preventDefault();
+  shopifyDropzone.style.borderColor = 'var(--accent)';
+});
+shopifyDropzone.addEventListener('dragleave', () => {
+  shopifyDropzone.style.borderColor = '';
+});
+shopifyDropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  shopifyDropzone.style.borderColor = '';
+  const files = Array.from(e.dataTransfer.files || []);
+  files.forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = evt => {
+        editorImages.push(evt.target.result);
+        renderMediaGrid();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+});
+
+// URL Adder Toggle
+btnAddMediaUrl.addEventListener('click', () => {
+  mediaUrlWrap.style.display = mediaUrlWrap.style.display === 'none' ? 'block' : 'none';
+  if (mediaUrlWrap.style.display === 'block') spMediaUrlInput.focus();
+});
+
+btnConfirmMediaUrl.addEventListener('click', () => {
+  const url = spMediaUrlInput.value.trim();
+  if (url) {
+    editorImages.push(url);
+    spMediaUrlInput.value = '';
+    mediaUrlWrap.style.display = 'none';
+    renderMediaGrid();
+    showToast('🖼️ Image added to gallery');
+  }
+});
+
+// ── 5. TAGS BUILDER ───────────────────────────────────────────────────────────
+function renderTags() {
+  spTagsPills.innerHTML = editorTags.map((tag, idx) => `
+    <span class="tag-pill">
+      ${tag}
+      <button type="button" class="tag-pill-remove" data-index="${idx}">✕</button>
+    </span>
+  `).join('');
+
+  spTagsPills.querySelectorAll('.tag-pill-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.index);
+      editorTags.splice(idx, 1);
+      renderTags();
+    });
+  });
+}
+
+spTagInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const val = spTagInput.value.trim().replace(/,/g, '');
+    if (val && !editorTags.includes(val)) {
+      editorTags.push(val);
+      renderTags();
+    }
+    spTagInput.value = '';
+  }
+});
+
+// ── 6. SHOPIFY VARIANTS & OPTIONS ─────────────────────────────────────────────
+spHasVariants.addEventListener('change', () => {
+  if (spHasVariants.checked && editorOptions.length === 0) {
+    editorOptions.push({ name: 'Size', values: ['Small', 'Medium', 'Large'] });
+  }
+  renderVariantsUI();
+});
+
+function renderVariantsUI() {
+  const hasVariants = spHasVariants.checked;
+  spVariantsBuilder.style.display = hasVariants ? 'block' : 'none';
+  spQtyGroup.style.display = hasVariants ? 'none' : 'block';
+
+  if (!hasVariants) return;
+
+  // Render Option Rows
+  spOptionsList.innerHTML = editorOptions.map((opt, optIdx) => `
+    <div class="variant-option-row">
+      <button type="button" class="btn-remove-option" data-opt="${optIdx}">✕ Remove</button>
+      <div class="grid-2-col" style="margin-bottom: 0.5rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Option Name</label>
+          <input type="text" class="opt-name-input" data-opt="${optIdx}" value="${opt.name}" placeholder="e.g. Size, Color">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Option Values (comma separated)</label>
+          <input type="text" class="opt-vals-input" data-opt="${optIdx}" value="${(opt.values || []).join(', ')}" placeholder="e.g. Small, Medium, Large">
         </div>
       </div>
-      <div class="card-actions">
-        <button class="btn-edit"   data-id="${p.id}">Edit</button>
-        <button class="btn-delete" data-id="${p.id}">Delete</button>
-      </div>
-    </div>`).join('');
+    </div>
+  `).join('');
 
-  productList.querySelectorAll('.btn-delete').forEach(btn =>
-    btn.addEventListener('click', () => deleteProduct(parseInt(btn.dataset.id))));
-  productList.querySelectorAll('.btn-edit').forEach(btn =>
-    btn.addEventListener('click', () => startEdit(parseInt(btn.dataset.id))));
+  // Option row listeners
+  spOptionsList.querySelectorAll('.btn-remove-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.opt);
+      editorOptions.splice(idx, 1);
+      if (editorOptions.length === 0) spHasVariants.checked = false;
+      renderVariantsUI();
+    });
+  });
+
+  spOptionsList.querySelectorAll('.opt-name-input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = parseInt(inp.dataset.opt);
+      editorOptions[idx].name = inp.value;
+      generateVariantMatrix();
+    });
+  });
+
+  spOptionsList.querySelectorAll('.opt-vals-input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const idx = parseInt(inp.dataset.opt);
+      const vals = inp.value.split(',').map(s => s.trim()).filter(Boolean);
+      editorOptions[idx].values = vals;
+      generateVariantMatrix();
+    });
+  });
+
+  generateVariantMatrix();
 }
 
-// ── Add / Update ──────────────────────────────────────────────────────────────
-form.addEventListener('submit', e => {
-  e.preventDefault();
-  const name     = nameInput.value.trim();
-  const price    = parseFloat(priceInput.value);
-  const stockRaw = stockInput.value.trim();
-  const stock    = stockRaw === '' ? null : parseInt(stockRaw);
-  const category = categoryInput.value.trim();
-  const desc     = descInput.value.trim();
-  const rawImages = imageUrlInput.value.split(',').map(s => s.trim()).filter(Boolean);
-  let images = [];
-  if (fileInput.files[0]) {
-    images = [imgPreview.src, ...rawImages];
-  } else {
-    images = rawImages;
-  }
-  const image = images[0] || '';
+btnAddOption.addEventListener('click', () => {
+  const defaultNames = ['Color', 'Material', 'Style'];
+  const nextName = defaultNames.find(n => !editorOptions.some(o => o.name.toLowerCase() === n.toLowerCase())) || 'Option';
+  editorOptions.push({ name: nextName, values: [] });
+  renderVariantsUI();
+});
 
-  if (!name || isNaN(price) || price <= 0) {
-    showToast('Please fill in a valid name and price.', 'error');
+function generateVariantMatrix() {
+  if (editorOptions.length === 0) {
+    spVariantsTbody.innerHTML = '';
     return;
   }
 
-  if (editingId !== null) {
-    products = products.map(p =>
-      p.id === editingId ? { ...p, name, price, stock, category, desc, image, images } : p);
-    saveProducts(products);
-    showToast('✅ Product updated!');
-    cancelEdit();
-  } else {
-    const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-    products.push({ id: newId, name, price, stock, category, desc, image, images });
-    saveProducts(products);
-    showToast('🎉 Product added!');
-    resetForm();
+  // Compute Cartesian product
+  const validOptions = editorOptions.filter(o => o.name && o.values && o.values.length > 0);
+  if (validOptions.length === 0) {
+    spVariantsTbody.innerHTML = `<tr><td colspan="4" style="color:var(--text-muted);padding:1rem;">Add option values above to generate variants.</td></tr>`;
+    return;
   }
-  renderList();
+
+  const combinations = validOptions.reduce((acc, curr) => {
+    const res = [];
+    acc.forEach(a => {
+      curr.values.forEach(v => {
+        res.push([...a, v]);
+      });
+    });
+    return res;
+  }, [[]]);
+
+  const defaultPrice = parseFloat(spPrice.value) || 0;
+
+  // Build variants array preserving existing entered data
+  editorVariants = combinations.map(combo => {
+    const title = combo.join(' / ');
+    const existing = editorVariants.find(v => v.title === title);
+    return {
+      title,
+      price: existing && existing.price !== undefined ? existing.price : defaultPrice,
+      stock: existing && existing.stock !== undefined ? existing.stock : 10,
+      sku: existing && existing.sku ? existing.sku : `${(spSku.value || 'SOLO')}-${combo.join('-').toUpperCase().replace(/\s+/g, '')}`
+    };
+  });
+
+  // Render Table Rows
+  spVariantsTbody.innerHTML = editorVariants.map((v, i) => `
+    <tr>
+      <td><strong>${v.title}</strong></td>
+      <td>
+        <input type="number" step="0.01" min="0" class="var-price" data-idx="${i}" value="${v.price}">
+      </td>
+      <td>
+        <input type="number" min="0" step="1" class="var-stock" data-idx="${i}" value="${v.stock}">
+      </td>
+      <td>
+        <input type="text" class="var-sku" data-idx="${i}" value="${v.sku}">
+      </td>
+    </tr>
+  `).join('');
+
+  spVariantsTbody.querySelectorAll('.var-price').forEach(inp => {
+    inp.addEventListener('input', () => { editorVariants[inp.dataset.idx].price = parseFloat(inp.value) || 0; });
+  });
+  spVariantsTbody.querySelectorAll('.var-stock').forEach(inp => {
+    inp.addEventListener('input', () => { editorVariants[inp.dataset.idx].stock = parseInt(inp.value) || 0; });
+  });
+  spVariantsTbody.querySelectorAll('.var-sku').forEach(inp => {
+    inp.addEventListener('input', () => { editorVariants[inp.dataset.idx].sku = inp.value; });
+  });
+}
+
+function updateVariantsPrice() {
+  const p = parseFloat(spPrice.value) || 0;
+  if (!spHasVariants.checked || editorVariants.length === 0) return;
+  // If user changes primary price, update variants that still had 0
+  editorVariants.forEach(v => {
+    if (!v.price || v.price === 0) v.price = p;
+  });
+}
+
+// ── 7. SEO PREVIEW & DESCRIPTION TOOLBAR ──────────────────────────────────────
+function updateSeoPreview() {
+  const title = (spTitle.value || '').trim() || 'Solo Product Title';
+  const desc = (spDesc.value || '').trim() || 'Describe your product to improve your rankings and attract buyers...';
+  const id = editingId || (products.length + 1);
+
+  seoPreviewTitle.textContent = `${title} | Solo`;
+  seoPreviewUrl.textContent = `https://adounas.com/product.html?id=${id}`;
+  seoPreviewDesc.textContent = desc.length > 150 ? `${desc.substring(0, 150)}...` : desc;
+}
+
+spTitle.addEventListener('input', updateSeoPreview);
+spDesc.addEventListener('input', updateSeoPreview);
+
+// Description Quick Toolbar
+document.querySelectorAll('.toolbar-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tag = btn.dataset.tag;
+    const start = spDesc.selectionStart;
+    const end = spDesc.selectionEnd;
+    const text = spDesc.value;
+    const selected = text.substring(start, end);
+
+    if (tag === 'bold') {
+      spDesc.value = text.substring(0, start) + `**${selected || 'bold text'}**` + text.substring(end);
+    } else if (tag === 'italic') {
+      spDesc.value = text.substring(0, start) + `*${selected || 'italic text'}*` + text.substring(end);
+    } else if (tag === 'list') {
+      spDesc.value = text.substring(0, start) + `\n• ${selected || 'Feature item 1'}\n• Feature item 2` + text.substring(end);
+    } else if (tag === 'clean') {
+      spDesc.value = spDesc.value.replace(/[*_#•]/g, '').trim();
+    }
+    updateSeoPreview();
+  });
 });
 
-// ── Delete ────────────────────────────────────────────────────────────────────
-function deleteProduct(id) {
-  if (!confirm('Delete this product? This cannot be undone.')) return;
-  products = products.filter(p => p.id !== id);
+// Quantity Tracking toggle
+spTrackQty.addEventListener('change', toggleQtyGroup);
+function toggleQtyGroup() {
+  if (spHasVariants.checked) {
+    spQtyGroup.style.display = 'none';
+  } else {
+    spQtyGroup.style.display = spTrackQty.checked ? 'block' : 'none';
+  }
+}
+
+// ── 8. 1-CLICK PRODUCT IMPORTER (Shopify Integrated) ──────────────────────────
+async function handleProductImport(url, statusEl, btnEl) {
+  if (!url) {
+    setImporterStatus(statusEl, 'Please enter a product URL first.', 'error');
+    return;
+  }
+
+  if (!/^https?:\/\//i.test(url)) {
+    setImporterStatus(statusEl, 'Please enter a valid link starting with https://', 'error');
+    return;
+  }
+
+  setImporterStatus(statusEl, '⏳ Extracting Shopify product details from supplier...', 'loading');
+  btnEl.disabled = true;
+
+  try {
+    const res = await adminFetch('/api/admin/import-product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || 'Failed to extract product data.');
+    }
+
+    const p = data.product;
+
+    // If on list view, open editor
+    if (productsListView.style.display !== 'none') {
+      openProductEditor(null);
+    }
+
+    // Auto-fill Shopify form
+    if (p.name) spTitle.value = p.name;
+    if (p.price) {
+      spPrice.value = p.price;
+      // Set reasonable compare-at price for sale display (e.g. +25%)
+      spComparePrice.value = (Number(p.price) * 1.25).toFixed(2);
+    }
+    if (p.desc) spDesc.value = p.desc;
+    if (p.category) spCategory.value = p.category;
+
+    // Detect vendor from URL
+    if (/alibaba/i.test(url)) spVendor.value = 'Alibaba';
+    else if (/aliexpress/i.test(url)) spVendor.value = 'AliExpress';
+    else if (/amazon/i.test(url)) spVendor.value = 'Amazon';
+    else if (/shein/i.test(url)) spVendor.value = 'Shein';
+    else spVendor.value = 'Supplier Import';
+
+    // Populate Media Images
+    const imgs = p.images && p.images.length > 0 ? p.images : (p.image ? [p.image] : []);
+    editorImages = imgs;
+    renderMediaGrid();
+
+    // Auto-tags
+    if (p.category && !editorTags.includes(p.category.toLowerCase())) {
+      editorTags.push(p.category.toLowerCase());
+    }
+    editorTags.push(spVendor.value.toLowerCase());
+    renderTags();
+
+    calculatePricingMetrics();
+    updateSeoPreview();
+
+    setImporterStatus(statusEl, `✅ Imported! Found "${(p.name || 'Product').substring(0, 45)}..." — review and save.`, 'success');
+    showToast('🎉 Shopify product details imported!');
+
+  } catch (err) {
+    console.error('Import error:', err);
+    setImporterStatus(statusEl, `❌ Import error: ${err.message}. Check link or fill details manually.`, 'error');
+  } finally {
+    btnEl.disabled = false;
+  }
+}
+
+function setImporterStatus(el, msg, type) {
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `importer-status ${type}`;
+  el.style.display = 'block';
+}
+
+// Quick Drawer Importer
+btnImportQuick.addEventListener('click', () => {
+  handleProductImport(importUrlInputQuick.value.trim(), importerStatusQuick, btnImportQuick);
+});
+importUrlInputQuick.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    btnImportQuick.click();
+  }
+});
+
+// Sidebar Importer
+btnImportSide.addEventListener('click', () => {
+  handleProductImport(importUrlInputSide.value.trim(), importerStatusSide, btnImportSide);
+});
+importUrlInputSide.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    btnImportSide.click();
+  }
+});
+
+// ── 9. SAVE / DUPLICATE / DELETE PRODUCT ──────────────────────────────────────
+btnSaveProduct.addEventListener('click', () => {
+  const name = spTitle.value.trim();
+  const price = parseFloat(spPrice.value);
+
+  if (!name) {
+    showToast('Product title is required.', 'error');
+    spTitle.focus();
+    return;
+  }
+
+  if (isNaN(price) || price < 0) {
+    showToast('Please enter a valid selling price.', 'error');
+    spPrice.focus();
+    return;
+  }
+
+  const comparePrice = parseFloat(spComparePrice.value) || null;
+  const cost = parseFloat(spCost.value) || null;
+  const desc = spDesc.value.trim();
+  const sku = spSku.value.trim();
+  const barcode = spBarcode.value.trim();
+  const trackQuantity = spTrackQty.checked;
+  const continueSelling = spContinueSelling.checked;
+  const status = spStatus.value || 'active';
+  const category = spCategory.value.trim();
+  const productType = spProductType.value.trim();
+  const vendor = spVendor.value.trim();
+
+  // Stock calculation
+  let stock = null;
+  if (spHasVariants.checked && editorVariants.length > 0) {
+    stock = editorVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
+  } else if (trackQuantity) {
+    const rawStock = spStock.value.trim();
+    stock = rawStock === '' ? null : parseInt(rawStock);
+  }
+
+  const image = editorImages[0] || '';
+  const images = editorImages;
+
+  const productData = {
+    name,
+    price,
+    comparePrice,
+    cost,
+    desc,
+    sku,
+    barcode,
+    trackQuantity,
+    continueSelling,
+    stock,
+    status,
+    category,
+    productType,
+    vendor,
+    tags: editorTags,
+    image,
+    images,
+    hasVariants: spHasVariants.checked,
+    options: spHasVariants.checked ? editorOptions : [],
+    variants: spHasVariants.checked ? editorVariants : []
+  };
+
+  if (editingId !== null) {
+    products = products.map(p => p.id === editingId ? { ...p, ...productData, id: editingId } : p);
+    saveProducts(products);
+    showToast('✅ Product saved successfully!');
+  } else {
+    const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+    products.push({ id: newId, ...productData });
+    saveProducts(products);
+    showToast('🎉 Product created successfully!');
+  }
+
+  closeProductEditor();
+});
+
+function duplicateProduct(id) {
+  const p = products.find(prod => prod.id === id);
+  if (!p) return;
+  const newId = products.length > 0 ? Math.max(...products.map(pr => pr.id)) + 1 : 1;
+  const copy = JSON.parse(JSON.stringify(p));
+  copy.id = newId;
+  copy.name = `${copy.name} (Copy)`;
+  copy.status = 'draft';
+  if (copy.sku) copy.sku = `${copy.sku}-COPY`;
+  products.push(copy);
   saveProducts(products);
-  if (editingId === id) cancelEdit();
-  renderList();
+  renderProductsTable();
+  showToast('📋 Product duplicated as Draft!');
+}
+
+function deleteProduct(id) {
+  const p = products.find(prod => prod.id === id);
+  if (!confirm(`Are you sure you want to delete "${p ? p.name : 'this product'}"? This cannot be undone.`)) return;
+  products = products.filter(prod => prod.id !== id);
+  saveProducts(products);
+  renderProductsTable();
   showToast('🗑️ Product deleted.');
 }
 
-// ── Edit ──────────────────────────────────────────────────────────────────────
-function startEdit(id) {
-  const p = products.find(p => p.id === id);
-  if (!p) return;
-  editingId            = id;
-  nameInput.value      = p.name;
-  priceInput.value     = p.price;
-  stockInput.value     = (p.stock !== undefined && p.stock !== null) ? p.stock : '';
-  categoryInput.value  = p.category || '';
-  descInput.value      = p.desc     || '';
-  imageUrlInput.value  = (p.images && p.images.length > 0) ? p.images.join(', ') : (p.image || '');
-  updatePreview(p.image || '');
-  formTitle.textContent    = '✏️ Edit Product';
-  submitBtn.textContent    = 'Save Changes';
-  cancelBtn.style.display  = 'flex';
-  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function cancelEdit() { editingId = null; resetForm(); }
-
-function resetForm() {
-  form.reset();
-  editingId              = null;
-  formTitle.textContent  = '➕ Add New Product';
-  submitBtn.textContent  = 'Add Product';
-  cancelBtn.style.display = 'none';
-  updatePreview('');
-}
-
-cancelBtn.addEventListener('click', cancelEdit);
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-renderList();
-
-// ── Tab Switching ─────────────────────────────────────────────────────────────
+// ── 10. TAB NAVIGATION ────────────────────────────────────────────────────────
 const tabProducts = document.getElementById('tab-products');
 const tabMessages = document.getElementById('tab-messages');
 const tabOrders   = document.getElementById('tab-orders');
@@ -405,7 +1012,8 @@ function setTab(active) {
 
 tabProducts.addEventListener('click', () => {
   setTab(tabProducts);
-  panelProducts.style.display = '';
+  panelProducts.style.display = 'block';
+  renderProductsTable();
 });
 
 tabMessages.addEventListener('click', () => {
@@ -417,13 +1025,13 @@ tabMessages.addEventListener('click', () => {
 
 tabOrders.addEventListener('click', () => {
   setTab(tabOrders);
-  panelOrders.style.display = '';
+  panelOrders.style.display = 'block';
   loadOrders();
 });
 
-// ── Admin Orders ──────────────────────────────────────────────────────────────
-const ordersListEl    = document.getElementById('orders-list');
-const ordersFilterEl  = document.getElementById('orders-filter');
+// ── 11. ADMIN ORDERS ──────────────────────────────────────────────────────────
+const ordersListEl     = document.getElementById('orders-list');
+const ordersFilterEl   = document.getElementById('orders-filter');
 const adminOrdersBadge = document.getElementById('admin-orders-badge');
 let allOrders = [];
 
@@ -441,7 +1049,6 @@ function renderOrders() {
   const filter = ordersFilterEl.value;
   const orders = filter === 'all' ? allOrders : allOrders.filter(o => o.status === filter);
 
-  // Badge for pending orders
   const pending = allOrders.filter(o => o.status === 'pending').length;
   if (pending > 0) {
     adminOrdersBadge.style.display = '';
@@ -463,33 +1070,36 @@ function renderOrders() {
     const telUrl = rawPhone ? `tel:${rawPhone}` : '#';
 
     return `
-    <div class="order-card">
-      <div class="order-info">
-        <div class="order-id-label">Order</div>
-        <div class="order-id-val">${escO(o.orderId)}</div>
-        <div class="order-date">${fmtDate(o.createdAt)}</div>
-        <div class="order-customer">
-          <strong>${escO(o.customer.name)}</strong> · ${escO(o.customer.phone)} · ${escO(o.customer.location)}
-          ${o.customer.email ? ` · <span style="color:var(--accent)">✉️ ${escO(o.customer.email)}</span>` : ''}
+    <div class="shopify-card" style="margin-bottom:1rem;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+        <div>
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Order #${escO(o.orderId)} · ${fmtDate(o.createdAt)}</div>
+          <div style="font-size:1.05rem; font-weight:700; margin:0.35rem 0;">
+            ${escO(o.customer.name)} <span style="font-weight:400; font-size:0.88rem; color:var(--text-muted);">(${escO(o.customer.phone)})</span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">
+            📍 ${escO(o.customer.location)} ${o.customer.email ? ` · ✉️ ${escO(o.customer.email)}` : ''}
+          </div>
+          <div style="background:#F9FAFB; padding:0.6rem 0.85rem; border-radius:var(--radius-xs); border:1px solid var(--border-subtle); font-size:0.85rem;">
+            ${o.items.map(i => `<strong>${escO(i.name)}</strong> × ${i.qty}`).join(' &nbsp;|&nbsp; ')}
+          </div>
+          <div style="margin-top:0.75rem; font-size:1.1rem; font-weight:800; color:var(--text);">
+            $${Number(o.total).toFixed(2)} <span style="font-size:0.75rem; color:#108043; background:#E3F1DF; padding:0.15rem 0.4rem; border-radius:4px;">💵 Cash on Delivery</span>
+          </div>
+          <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
+            ${cleanDigits ? `<a href="${waUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" style="color:#25D366; font-weight:700;">💬 WhatsApp</a>` : ''}
+            ${rawPhone ? `<a href="${telUrl}" class="btn btn-sm btn-secondary">📞 Call</a>` : ''}
+          </div>
         </div>
-        <div class="order-items-list">
-          ${o.items.map(i => `${escO(i.name)} × ${i.qty}`).join(' &nbsp;|&nbsp; ')}
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
+          <span class="badge-status-pill badge-${o.status === 'confirmed' ? 'active' : (o.status === 'pending' ? 'draft' : 'sale')}">${STATUS_LABELS[o.status] || o.status}</span>
+          <select class="sp-select" style="width:auto; padding:0.35rem 0.6rem; font-size:0.82rem;" onchange="updateOrderStatus('${escO(o.orderId)}', this.value)">
+            <option value="pending"   ${o.status==='pending'   ? 'selected':''}>⏳ Pending</option>
+            <option value="confirmed" ${o.status==='confirmed' ? 'selected':''}>✅ Confirmed</option>
+            <option value="delivered" ${o.status==='delivered' ? 'selected':''}>📦 Delivered</option>
+            <option value="cancelled" ${o.status==='cancelled' ? 'selected':''}>❌ Cancelled</option>
+          </select>
         </div>
-        <div class="order-total">$${Number(o.total).toFixed(2)} <small style="font-size:0.75rem;font-weight:600;color:#16A34A">💵 COD</small></div>
-        
-        <div class="order-actions-row">
-          ${cleanDigits ? `<a href="${waUrl}" target="_blank" rel="noopener" class="btn-wa">💬 WhatsApp Customer</a>` : ''}
-          ${rawPhone ? `<a href="${telUrl}" class="btn-call">📞 Call</a>` : ''}
-        </div>
-      </div>
-      <div class="order-status-col">
-        <span class="order-status-badge status-${o.status}">${STATUS_LABELS[o.status] || o.status}</span>
-        <select class="order-status-select" data-id="${escO(o.orderId)}" onchange="updateOrderStatus('${escO(o.orderId)}', this.value)">
-          <option value="pending"   ${o.status==='pending'   ? 'selected':''}>Pending</option>
-          <option value="confirmed" ${o.status==='confirmed' ? 'selected':''}>Confirmed</option>
-          <option value="delivered" ${o.status==='delivered' ? 'selected':''}>Delivered</option>
-          <option value="cancelled" ${o.status==='cancelled' ? 'selected':''}>Cancelled</option>
-        </select>
       </div>
     </div>`;
   }).join('');
@@ -544,15 +1154,13 @@ if (btnTgTest) {
   });
 }
 
-// Periodically check for new orders when on Orders tab
 setInterval(async () => {
   if (tabOrders.classList.contains('active') && getAdminToken()) {
     await loadOrders();
   }
 }, 10000);
 
-
-// ── Admin Chat ────────────────────────────────────────────────────────────────
+// ── 12. ADMIN CHAT ────────────────────────────────────────────────────────────
 const chatListEl       = document.getElementById('admin-chat-list');
 const chatThreadEl     = document.getElementById('admin-chat-thread');
 const threadMsgsEl     = document.getElementById('admin-thread-messages');
@@ -565,7 +1173,7 @@ let activeChatId   = null;
 let chatPollTimer  = null;
 
 function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
@@ -576,7 +1184,6 @@ async function loadChatList() {
     const res   = await adminFetch('/api/chat/all');
     const chats = await res.json();
 
-    // Badge count
     const totalUnread = chats.reduce((s, c) => s + (c.unread || 0), 0);
     if (totalUnread > 0) {
       adminMsgBadge.style.display = '';
@@ -678,8 +1285,10 @@ function startChatPolling() {
   }, 4000);
 }
 
-
 function stopChatPolling() {
   clearInterval(chatPollTimer);
   chatPollTimer = null;
 }
+
+// ── Initial Render ────────────────────────────────────────────────────────────
+renderProductsTable();

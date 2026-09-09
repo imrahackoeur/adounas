@@ -76,35 +76,129 @@
   padding-top: 1rem;
 }
 
+.pdp-meta-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
 .pdp-category {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
+}
+
+.pdp-vendor {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pdp-sku {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-bottom: 0.75rem;
+  font-family: monospace;
 }
 
 .pdp-title {
-  font-size: 2.5rem;
+  font-size: 2.3rem;
   font-weight: 800;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   color: var(--text);
-  line-height: 1.1;
+  line-height: 1.15;
+}
+
+.pdp-price-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
 }
 
 .pdp-price {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: var(--text);
-  margin-bottom: 1.5rem;
+}
+
+.pdp-compare-price {
+  font-size: 1.1rem;
+  text-decoration: line-through;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.pdp-sale-badge {
+  background: #EDE9FE;
+  color: #6D28D9;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+/* Variants Options Selector */
+.pdp-variants-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.pdp-option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pdp-option-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pdp-option-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pdp-option-pill {
+  background: var(--bg-2);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.2s ease;
+  font-family: var(--font);
+}
+
+.pdp-option-pill:hover {
+  border-color: var(--accent);
+}
+
+.pdp-option-pill.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 2px 8px var(--accent-glow);
 }
 
 .pdp-desc {
   font-size: 1.05rem;
   line-height: 1.6;
   color: var(--text-muted);
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 }
 
 .pdp-actions {

@@ -1,22 +1,56 @@
-// ── Customer In-App Chat ──────────────────────────────────────────────────────
-// Works on both index.html and product.html
+// ── Customer In-App Chat (Persistent & Account-Linked) ──────────────────────
+// Works on index.html, product.html, and all pages
 
 const CHAT_ID_KEY  = 'solo_chat_id';
 const CHAT_NM_KEY  = 'solo_chat_name';
-const POLL_INTERVAL = 4000; // ms
+const POLL_INTERVAL = 3500; // ms
+
+function getLoggedInUser() {
+  try {
+    const raw = localStorage.getItem('solo_auth_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
 function getChatId() {
+  const user = getLoggedInUser();
+  if (user && user.id) {
+    const userChatId = 'user_chat_' + user.id;
+    localStorage.setItem(CHAT_ID_KEY, userChatId);
+    return userChatId;
+  }
   let id = localStorage.getItem(CHAT_ID_KEY);
   if (!id) {
-    id = 'chat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    id = 'guest_chat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     localStorage.setItem(CHAT_ID_KEY, id);
   }
   return id;
 }
 
+function getLocalHistory(chatId) {
+  try {
+    const raw = localStorage.getItem('solo_chat_history_' + chatId);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalHistory(chatId, msgs) {
+  try {
+    localStorage.setItem('solo_chat_history_' + chatId, JSON.stringify(msgs));
+  } catch {}
+}
+
 function formatTime(ts) {
   const d = new Date(ts);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function appendMessage(container, msg) {
@@ -25,10 +59,6 @@ function appendMessage(container, msg) {
   div.innerHTML = `${escapeHtml(msg.text)}<span class="chat-msg-time">${formatTime(msg.ts)}</span>`;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
-}
-
-function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function initChat() {
@@ -45,57 +75,71 @@ function initChat() {
   const chatInput    = document.getElementById('chat-input');
   const sendBtn      = document.getElementById('chat-send-btn');
 
-  if (!triggerBtn) return; // Not on a page with the chat widget
+  if (!triggerBtn || !messagesEl) return;
 
+  const user = getLoggedInUser();
   const chatId = getChatId();
-  let chatName = localStorage.getItem(CHAT_NM_KEY);
+  let chatName = (user && user.name) ? user.name : localStorage.getItem(CHAT_NM_KEY);
   let isOpen   = false;
   let pollTimer = null;
-  let lastMsgCount = 0;
+  let currentMessages = getLocalHistory(chatId);
 
-  // Restore state: if name exists, skip name prompt
-  if (chatName) {
-    namePrompt.style.display = 'none';
-    messagesEl.style.display = 'flex';
-    inputRow.style.display   = 'flex';
+  // Render locally cached messages immediately so they never disappear
+  if (currentMessages.length > 0) {
+    messagesEl.innerHTML = '';
+    currentMessages.forEach(m => appendMessage(messagesEl, m));
   }
 
-  // ── Toggle ────────────────────────────────────────────────
+  // Restore UI state if name or user exists
+  if (chatName || (user && user.name)) {
+    if (namePrompt) namePrompt.style.display = 'none';
+    messagesEl.style.display = 'flex';
+    if (inputRow) inputRow.style.display = 'flex';
+  }
+
+  // ── Toggle Chat Window ──────────────────────────────────
   triggerBtn.addEventListener('click', () => {
     isOpen = !isOpen;
     chatWindow.style.display = isOpen ? 'flex' : 'none';
-    chatIconOpen.style.display  = isOpen ? 'none' : '';
-    chatIconClose.style.display = isOpen ? '' : 'none';
-    unreadBadge.style.display   = 'none';
+    if (chatIconOpen) chatIconOpen.style.display  = isOpen ? 'none' : '';
+    if (chatIconClose) chatIconClose.style.display = isOpen ? '' : 'none';
+    if (unreadBadge) unreadBadge.style.display   = 'none';
 
-    if (isOpen && chatName) {
+    if (isOpen) {
       loadMessages();
       startPolling();
+      if (chatInput) chatInput.focus();
+    } else {
+      stopPolling();
     }
-    if (!isOpen) stopPolling();
   });
 
-  // ── Name submission ───────────────────────────────────────
-  nameSubmit.addEventListener('click', submitName);
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitName(); });
+  // ── Name Submission for Guests ──────────────────────────
+  if (nameSubmit && nameInput) {
+    nameSubmit.addEventListener('click', submitName);
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitName(); });
+  }
 
   function submitName() {
-    const val = nameInput.value.trim();
+    const val = nameInput ? nameInput.value.trim() : '';
     if (!val) return;
     chatName = val;
     localStorage.setItem(CHAT_NM_KEY, val);
-    namePrompt.style.display = 'none';
+    if (namePrompt) namePrompt.style.display = 'none';
     messagesEl.style.display = 'flex';
-    inputRow.style.display   = 'flex';
+    if (inputRow) inputRow.style.display = 'flex';
     sendMessage(`Hi, I'm ${chatName}! 👋`);
     startPolling();
   }
 
-  // ── Send message ──────────────────────────────────────────
-  sendBtn.addEventListener('click', () => sendFromInput());
-  chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendFromInput(); });
+  // ── Send Message ─────────────────────────────────────────
+  if (sendBtn && chatInput) {
+    sendBtn.addEventListener('click', () => sendFromInput());
+    chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendFromInput(); });
+  }
 
   function sendFromInput() {
+    if (!chatInput) return;
     const text = chatInput.value.trim();
     if (!text) return;
     chatInput.value = '';
@@ -103,38 +147,57 @@ function initChat() {
   }
 
   async function sendMessage(text) {
+    const activeUser = getLoggedInUser();
+    const senderName = (activeUser && activeUser.name) ? activeUser.name : (chatName || 'Customer');
     const msg = { id: Date.now(), sender: 'customer', text, ts: Date.now() };
+
+    // Append to UI & local storage immediately
     appendMessage(messagesEl, msg);
-    lastMsgCount++;
+    currentMessages.push(msg);
+    saveLocalHistory(chatId, currentMessages);
+
     try {
       await fetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId, sender: 'customer', text, name: chatName }),
+        body: JSON.stringify({
+          chatId,
+          sender: 'customer',
+          text,
+          name: senderName
+        }),
       });
-    } catch (e) { console.warn('Chat send error:', e); }
+    } catch (e) {
+      console.warn('Chat send error:', e);
+    }
   }
 
-  // ── Polling ───────────────────────────────────────────────
+  // ── Load & Sync Messages ─────────────────────────────────
   async function loadMessages() {
     try {
       const res  = await fetch(`/api/chat/sync?chatId=${chatId}`);
+      if (!res.ok) return;
       const data = await res.json();
-      const msgs = data.messages || [];
-      if (msgs.length !== lastMsgCount) {
-        lastMsgCount = msgs.length;
+      const serverMsgs = data.messages || [];
+
+      if (JSON.stringify(serverMsgs) !== JSON.stringify(currentMessages)) {
+        currentMessages = serverMsgs;
+        saveLocalHistory(chatId, serverMsgs);
         messagesEl.innerHTML = '';
-        msgs.forEach(m => appendMessage(messagesEl, m));
-        // Unread badge if window is closed
-        if (!isOpen) {
-          const adminMsgs = msgs.filter(m => m.sender === 'admin');
+        currentMessages.forEach(m => appendMessage(messagesEl, m));
+
+        // Update unread badge when closed
+        if (!isOpen && unreadBadge) {
+          const adminMsgs = serverMsgs.filter(m => m.sender === 'admin');
           if (adminMsgs.length > 0) {
             unreadBadge.style.display = 'flex';
             unreadBadge.textContent   = adminMsgs.length;
           }
         }
       }
-    } catch(e) { /* Server may not be available */ }
+    } catch (e) {
+      // Offline fallback: currentMessages remains loaded from local storage
+    }
   }
 
   function startPolling() {
@@ -146,10 +209,15 @@ function initChat() {
     pollTimer = null;
   }
 
-  // Start polling silently in background to detect admin replies
-  if (chatName) {
-    startPolling();
-  }
+  // Always sync messages on initial load & start silent background polling
+  loadMessages();
+  startPolling();
 }
 
-initChat();
+// Initialize chat when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initChat);
+} else {
+  initChat();
+}
+

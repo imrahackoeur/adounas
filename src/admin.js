@@ -35,7 +35,12 @@ function unlock(token) {
   if (token) sessionStorage.setItem(TOKEN_KEY, token);
   pwGate.style.display = 'none';
   adminContent.style.display = 'block';
-  renderProductsTable();
+  if (tabDashboard && panelDashboard) {
+    setTab(tabDashboard, panelDashboard);
+    loadDashboard();
+  } else {
+    renderProductsTable();
+  }
 }
 
 function lock() {
@@ -1022,39 +1027,445 @@ function deleteProduct(id) {
   showToast('🗑️ Product deleted.');
 }
 
-// ── 10. TAB NAVIGATION ────────────────────────────────────────────────────────
-const tabProducts = document.getElementById('tab-products');
-const tabMessages = document.getElementById('tab-messages');
-const tabOrders   = document.getElementById('tab-orders');
-const panelProducts = document.getElementById('panel-products');
-const panelMessages = document.getElementById('panel-messages');
-const panelOrders   = document.getElementById('panel-orders');
+// ── 10. DASHBOARD & TAB NAVIGATION ────────────────────────────────────────────
+const tabDashboard   = document.getElementById('tab-dashboard');
+const tabProducts    = document.getElementById('tab-products');
+const tabMessages    = document.getElementById('tab-messages');
+const tabOrders      = document.getElementById('tab-orders');
 
-function setTab(active) {
-  [tabProducts, tabMessages, tabOrders].forEach(t => t.classList.remove('active'));
-  [panelProducts, panelMessages, panelOrders].forEach(p => p.style.display = 'none');
+const panelDashboard = document.getElementById('panel-dashboard');
+const panelProducts  = document.getElementById('panel-products');
+const panelMessages  = document.getElementById('panel-messages');
+const panelOrders    = document.getElementById('panel-orders');
+
+function setTab(activeTab, activePanel) {
+  [tabDashboard, tabProducts, tabMessages, tabOrders].forEach(t => t && t.classList.remove('active'));
+  [panelDashboard, panelProducts, panelMessages, panelOrders].forEach(p => p && (p.style.display = 'none'));
   stopChatPolling();
-  active.classList.add('active');
+  if (activeTab) activeTab.classList.add('active');
+  if (activePanel) activePanel.style.display = (activePanel === panelMessages ? 'grid' : 'block');
+}
+
+// Tab Click Handlers
+if (tabDashboard) {
+  tabDashboard.addEventListener('click', () => {
+    setTab(tabDashboard, panelDashboard);
+    loadDashboard();
+  });
 }
 
 tabProducts.addEventListener('click', () => {
-  setTab(tabProducts);
-  panelProducts.style.display = 'block';
+  setTab(tabProducts, panelProducts);
   renderProductsTable();
 });
 
 tabMessages.addEventListener('click', () => {
-  setTab(tabMessages);
-  panelMessages.style.display = 'grid';
+  setTab(tabMessages, panelMessages);
   loadChatList();
   startChatPolling();
 });
 
 tabOrders.addEventListener('click', () => {
-  setTab(tabOrders);
-  panelOrders.style.display = 'block';
+  setTab(tabOrders, panelOrders);
   loadOrders();
 });
+
+// Dashboard Quick Action Buttons
+const btnDashRefresh = document.getElementById('btn-dash-refresh');
+const btnDashQuickImport = document.getElementById('btn-dash-quick-import');
+const btnDashAddProduct = document.getElementById('btn-dash-add-product');
+const btnDashViewAllOrders = document.getElementById('btn-dash-view-all-orders');
+const btnDashViewAllProducts = document.getElementById('btn-dash-view-all-products');
+
+if (btnDashRefresh) {
+  btnDashRefresh.addEventListener('click', async () => {
+    btnDashRefresh.disabled = true;
+    const orig = btnDashRefresh.innerHTML;
+    btnDashRefresh.innerHTML = '<span>⏳ Actualisation…</span>';
+    await loadDashboard();
+    showToast('🔄 Tableau de bord actualisé');
+    btnDashRefresh.innerHTML = orig;
+    btnDashRefresh.disabled = false;
+  });
+}
+
+if (btnDashQuickImport) {
+  btnDashQuickImport.addEventListener('click', () => {
+    setTab(tabProducts, panelProducts);
+    renderProductsTable();
+    quickImportDrawer.style.display = 'block';
+    importUrlInputQuick.focus();
+  });
+}
+
+if (btnDashAddProduct) {
+  btnDashAddProduct.addEventListener('click', () => {
+    setTab(tabProducts, panelProducts);
+    openProductEditor(null);
+  });
+}
+
+if (btnDashViewAllOrders) {
+  btnDashViewAllOrders.addEventListener('click', () => {
+    setTab(tabOrders, panelOrders);
+    loadOrders();
+  });
+}
+
+if (btnDashViewAllProducts) {
+  btnDashViewAllProducts.addEventListener('click', () => {
+    setTab(tabProducts, panelProducts);
+    renderProductsTable();
+  });
+}
+
+// ── Dashboard Data Engine ─────────────────────────────────────────────────────
+async function loadDashboard() {
+  const prods = loadProducts();
+
+  // Fetch orders and chats in parallel
+  let orders = [];
+  let chats = [];
+  try {
+    const [ordersRes, chatsRes] = await Promise.all([
+      adminFetch('/api/orders').catch(() => null),
+      adminFetch('/api/chat/all').catch(() => null)
+    ]);
+    if (ordersRes && ordersRes.ok) orders = await ordersRes.json();
+    if (chatsRes && chatsRes.ok) chats = await chatsRes.json();
+  } catch (err) {
+    console.warn('Dashboard fetch error:', err);
+  }
+
+  allOrders = orders;
+
+  // 1. Calculations
+  const validOrders = orders.filter(o => o.status !== 'cancelled');
+  const totalRevenue = validOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const totalOrdersCount = orders.length;
+  const pendingCount = orders.filter(o => o.status === 'pending').length;
+  const confirmedCount = orders.filter(o => o.status === 'confirmed').length;
+  const deliveredCount = orders.filter(o => o.status === 'delivered').length;
+  const cancelledCount = orders.filter(o => o.status === 'cancelled').length;
+
+  const totalProducts = prods.length;
+  const totalUnitsInStock = prods.reduce((sum, p) => {
+    if (p.hasVariants && p.variants && p.variants.length > 0) {
+      return sum + p.variants.reduce((vSum, v) => vSum + (Number(v.stock) || 0), 0);
+    }
+    return sum + (Number(p.stock) || 0);
+  }, 0);
+
+  const lowStockProds = prods.filter(p => {
+    const stock = Number(p.stock) || 0;
+    return stock <= 5;
+  });
+
+  const aov = validOrders.length > 0 ? Math.round(totalRevenue / validOrders.length) : 0;
+  const totalChats = chats.length;
+  const totalUnreadChats = chats.reduce((sum, c) => sum + (c.unread || 0), 0);
+
+  // 2. Update KPI Metrics DOM
+  const valRevenue = document.getElementById('dash-val-revenue');
+  const valOrders = document.getElementById('dash-val-orders');
+  const chipPending = document.getElementById('dash-chip-pending');
+  const chipConfirmed = document.getElementById('dash-chip-confirmed');
+  const valProducts = document.getElementById('dash-val-products');
+  const valStock = document.getElementById('dash-val-stock');
+  const valAov = document.getElementById('dash-val-aov');
+  const valChats = document.getElementById('dash-val-chats');
+  const valUnreadChats = document.getElementById('dash-val-unread-chats');
+
+  if (valRevenue) valRevenue.textContent = formatFCFA(totalRevenue);
+  if (valOrders) valOrders.textContent = totalOrdersCount;
+  if (chipPending) chipPending.textContent = `${pendingCount} en attente`;
+  if (chipConfirmed) chipConfirmed.textContent = `${confirmedCount} confirmées`;
+  if (valProducts) valProducts.innerHTML = `${totalProducts} <span class="kpi-unit">articles</span>`;
+  if (valStock) valStock.textContent = `${totalUnitsInStock} unités totales (${lowStockProds.length} stock faible)`;
+  if (valAov) valAov.textContent = formatFCFA(aov);
+  if (valChats) valChats.textContent = totalChats;
+  if (valUnreadChats) valUnreadChats.textContent = `${totalUnreadChats} message${totalUnreadChats > 1 ? 's' : ''} non lu${totalUnreadChats > 1 ? 's' : ''}`;
+
+  // Update Badges on tabs
+  if (adminOrdersBadge) {
+    if (pendingCount > 0) {
+      adminOrdersBadge.style.display = '';
+      adminOrdersBadge.textContent = pendingCount;
+    } else {
+      adminOrdersBadge.style.display = 'none';
+    }
+  }
+  if (adminMsgBadge) {
+    if (totalUnreadChats > 0) {
+      adminMsgBadge.style.display = '';
+      adminMsgBadge.textContent = totalUnreadChats;
+    } else {
+      adminMsgBadge.style.display = 'none';
+    }
+  }
+
+  // 3. Render 7-day Sales Chart
+  renderSalesChart(orders);
+
+  // 4. Render Fulfillment Progress
+  renderFulfillmentStats(pendingCount, confirmedCount, deliveredCount, cancelledCount, totalOrdersCount);
+
+  // 5. Render Recent Orders List
+  renderRecentOrders(orders);
+
+  // 6. Render Low Stock Alerts
+  renderLowStockAlerts(lowStockProds);
+
+  // 7. Render Top Products Leaderboard
+  renderTopProducts(orders, prods);
+}
+
+// ── SVG Sales Chart ───────────────────────────────────────────────────────────
+function renderSalesChart(orders) {
+  const container = document.getElementById('dash-sales-chart-wrapper');
+  if (!container) return;
+
+  const days = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+    days.push({ dateStr, label, revenue: 0, ordersCount: 0 });
+  }
+
+  orders.forEach(o => {
+    if (o.status === 'cancelled') return;
+    const orderDate = new Date(o.createdAt).toISOString().split('T')[0];
+    const dayObj = days.find(d => d.dateStr === orderDate);
+    if (dayObj) {
+      dayObj.revenue += (Number(o.total) || 0);
+      dayObj.ordersCount += 1;
+    }
+  });
+
+  const maxRevenue = Math.max(...days.map(d => d.revenue), 25000);
+
+  const width = 600;
+  const height = 200;
+  const padX = 50;
+  const padY = 30;
+  const chartW = width - (padX * 2);
+  const chartH = height - (padY * 2);
+
+  const points = days.map((d, i) => {
+    const x = padX + (i / (days.length - 1)) * chartW;
+    const y = padY + chartH - (d.revenue / maxRevenue) * chartH;
+    return { ...d, x, y };
+  });
+
+  const linePath = points.reduce((acc, p, i) => {
+    return i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`;
+  }, '');
+
+  const areaPath = `${linePath} L ${points[points.length - 1].x} ${padY + chartH} L ${points[0].x} ${padY + chartH} Z`;
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" class="chart-svg" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#4F46E5" stop-opacity="0.30"/>
+          <stop offset="100%" stop-color="#4F46E5" stop-opacity="0.0"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Horizontal gridlines -->
+      <line x1="${padX}" y1="${padY}" x2="${width - padX}" y2="${padY}" stroke="#E5E7EB" stroke-dasharray="3,3"/>
+      <line x1="${padX}" y1="${padY + chartH / 2}" x2="${width - padX}" y2="${padY + chartH / 2}" stroke="#E5E7EB" stroke-dasharray="3,3"/>
+      <line x1="${padX}" y1="${padY + chartH}" x2="${width - padX}" y2="${padY + chartH}" stroke="#E5E7EB"/>
+
+      <!-- Area & Line -->
+      <path d="${areaPath}" fill="url(#salesGrad)"/>
+      <path d="${linePath}" fill="none" stroke="#4F46E5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <!-- Points & Day Labels -->
+      ${points.map(p => `
+        <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="#FFFFFF" stroke="#4F46E5" stroke-width="2.5" />
+        <text x="${p.x}" y="${height - 8}" text-anchor="middle" font-size="11" fill="#6B7280" font-family="sans-serif">${p.label}</text>
+      `).join('')}
+    </svg>
+  `;
+}
+
+// ── Fulfillment Stats ─────────────────────────────────────────────────────────
+function renderFulfillmentStats(pending, confirmed, delivered, cancelled, total) {
+  const bar = document.getElementById('fulfillment-progress-bar');
+  const statsList = document.getElementById('fulfillment-stats-list');
+  if (!bar || !statsList) return;
+
+  if (total === 0) {
+    bar.innerHTML = `<div class="bar-seg" style="width:100%; background:#E5E7EB;"></div>`;
+    statsList.innerHTML = `<p style="color:var(--text-muted); font-size:0.85rem; margin:0;">Aucune commande pour le moment.</p>`;
+    return;
+  }
+
+  const pPct = ((pending / total) * 100).toFixed(1);
+  const cPct = ((confirmed / total) * 100).toFixed(1);
+  const dPct = ((delivered / total) * 100).toFixed(1);
+  const xPct = ((cancelled / total) * 100).toFixed(1);
+
+  bar.innerHTML = `
+    <div class="bar-seg bar-pending" style="width:${pPct}%;" title="En attente: ${pending}"></div>
+    <div class="bar-seg bar-confirmed" style="width:${cPct}%;" title="Confirmées: ${confirmed}"></div>
+    <div class="bar-seg bar-delivered" style="width:${dPct}%;" title="Livrées: ${delivered}"></div>
+    <div class="bar-seg bar-cancelled" style="width:${xPct}%;" title="Annulées: ${cancelled}"></div>
+  `;
+
+  statsList.innerHTML = `
+    <div class="fulfillment-stat-row">
+      <div class="fulfillment-stat-label"><span class="legend-dot" style="background:#F59E0B"></span> ⏳ En Attente</div>
+      <div class="fulfillment-stat-val">${pending} (${pPct}%)</div>
+    </div>
+    <div class="fulfillment-stat-row">
+      <div class="fulfillment-stat-label"><span class="legend-dot" style="background:#10B981"></span> ✅ Confirmées</div>
+      <div class="fulfillment-stat-val">${confirmed} (${cPct}%)</div>
+    </div>
+    <div class="fulfillment-stat-row">
+      <div class="fulfillment-stat-label"><span class="legend-dot" style="background:#3B82F6"></span> 📦 Livrées</div>
+      <div class="fulfillment-stat-val">${delivered} (${dPct}%)</div>
+    </div>
+    <div class="fulfillment-stat-row">
+      <div class="fulfillment-stat-label"><span class="legend-dot" style="background:#EF4444"></span> ❌ Annulées</div>
+      <div class="fulfillment-stat-val">${cancelled} (${xPct}%)</div>
+    </div>
+  `;
+}
+
+// ── Dashboard Recent Orders ───────────────────────────────────────────────────
+function renderRecentOrders(orders) {
+  const container = document.getElementById('dash-recent-orders-list');
+  if (!container) return;
+
+  if (orders.length === 0) {
+    container.innerHTML = `<div style="padding:1.5rem; text-align:center; color:var(--text-muted);">Aucune commande enregistrée pour le moment.</div>`;
+    return;
+  }
+
+  const recent = orders.slice(0, 5);
+  container.innerHTML = recent.map(o => {
+    const rawPhone = (o.customer.phone || '').trim();
+    const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
+    const waMsg = encodeURIComponent(`Bonjour ${o.customer.name}! Ici la boutique Adounas concernant votre commande #${o.orderId} (${formatFCFA(o.total)}).`);
+    const waUrl = cleanDigits ? `https://wa.me/${cleanDigits}?text=${waMsg}` : '#';
+
+    return `
+      <div class="dash-recent-order-item">
+        <div class="order-item-left">
+          <div class="order-item-id">#${escO(o.orderId)} · ${fmtDate(o.createdAt)}</div>
+          <div class="order-item-cust">${escO(o.customer.name)} <span style="font-weight:400; color:var(--text-muted); font-size:0.8rem;">(${escO(o.customer.phone)})</span></div>
+          <div class="order-item-details">📍 ${escO(o.customer.location)} · ${o.items.length} article${o.items.length > 1 ? 's' : ''}</div>
+        </div>
+        <div class="order-item-right">
+          <div class="order-item-price">${formatFCFA(o.total)}</div>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            ${cleanDigits ? `<a href="${waUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" style="color:#25D366; padding:0.2rem 0.5rem; font-size:0.75rem;">WhatsApp</a>` : ''}
+            <select class="sp-select" style="width:auto; padding:0.2rem 0.4rem; font-size:0.75rem;" onchange="updateOrderStatus('${escO(o.orderId)}', this.value); loadDashboard();">
+              <option value="pending"   ${o.status==='pending'   ? 'selected':''}>⏳ En attente</option>
+              <option value="confirmed" ${o.status==='confirmed' ? 'selected':''}>✅ Confirmée</option>
+              <option value="delivered" ${o.status==='delivered' ? 'selected':''}>📦 Livrée</option>
+              <option value="cancelled" ${o.status==='cancelled' ? 'selected':''}>❌ Annulée</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Low Stock Alerts ──────────────────────────────────────────────────────────
+function renderLowStockAlerts(lowStockProds) {
+  const container = document.getElementById('dash-low-stock-list');
+  if (!container) return;
+
+  if (lowStockProds.length === 0) {
+    container.innerHTML = `<div style="padding:1rem 0; font-size:0.85rem; color:#108043;">✅ Tous les stocks sont à un niveau optimal (> 5 unités).</div>`;
+    return;
+  }
+
+  container.innerHTML = lowStockProds.slice(0, 4).map(p => {
+    const img = (p.images && p.images[0]) || p.image || 'https://placehold.co/80x80';
+    return `
+      <div class="dash-alert-item">
+        <img src="${img}" class="dash-alert-thumb" alt="${escO(p.name)}" onerror="this.src='https://placehold.co/80x80'">
+        <div class="dash-alert-info">
+          <div class="dash-alert-title">${escO(p.name)}</div>
+          <div class="dash-alert-stock">Stock restant: ${p.stock || 0} unité${p.stock > 1 ? 's' : ''}</div>
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary btn-dash-edit-stock" data-id="${p.id}" style="padding:0.25rem 0.5rem; font-size:0.75rem;">
+          Modifier Stock
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.btn-dash-edit-stock').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setTab(tabProducts, panelProducts);
+      openProductEditor(parseInt(btn.dataset.id));
+    });
+  });
+}
+
+// ── Top Products Leaderboard ──────────────────────────────────────────────────
+function renderTopProducts(orders, prods) {
+  const container = document.getElementById('dash-top-products-list');
+  if (!container) return;
+
+  const salesMap = {};
+  orders.forEach(o => {
+    if (o.status === 'cancelled') return;
+    (o.items || []).forEach(item => {
+      const id = item.id;
+      if (!salesMap[id]) {
+        salesMap[id] = { id, name: item.name, image: item.image, qty: 0, revenue: 0 };
+      }
+      salesMap[id].qty += (item.qty || 1);
+      salesMap[id].revenue += (Number(item.price || 0) * (item.qty || 1));
+    });
+  });
+
+  const ranked = Object.values(salesMap).sort((a, b) => b.qty - a.qty).slice(0, 4);
+
+  if (ranked.length === 0) {
+    container.innerHTML = prods.slice(0, 4).map((p, idx) => {
+      const img = (p.images && p.images[0]) || p.image || 'https://placehold.co/80x80';
+      return `
+        <div class="dash-top-prod-item">
+          <div class="top-prod-rank">#${idx + 1}</div>
+          <img src="${img}" class="top-prod-thumb" alt="${escO(p.name)}" onerror="this.src='https://placehold.co/80x80'">
+          <div class="top-prod-info">
+            <div class="top-prod-name">${escO(p.name)}</div>
+            <div class="top-prod-sales">${formatFCFA(p.price || 0)}</div>
+          </div>
+          <div class="top-prod-rev">${p.stock || 0} en stock</div>
+        </div>
+      `;
+    }).join('');
+    return;
+  }
+
+  container.innerHTML = ranked.map((item, idx) => {
+    const prodRef = prods.find(p => p.id === item.id);
+    const img = (prodRef && prodRef.images && prodRef.images[0]) || item.image || (prodRef && prodRef.image) || 'https://placehold.co/80x80';
+    return `
+      <div class="dash-top-prod-item">
+        <div class="top-prod-rank">#${idx + 1}</div>
+        <img src="${img}" class="top-prod-thumb" alt="${escO(item.name)}" onerror="this.src='https://placehold.co/80x80'">
+        <div class="top-prod-info">
+          <div class="top-prod-name">${escO(item.name)}</div>
+          <div class="top-prod-sales">${item.qty} vendu${item.qty > 1 ? 's' : ''}</div>
+        </div>
+        <div class="top-prod-rev">${formatFCFA(item.revenue)}</div>
+      </div>
+    `;
+  }).join('');
+}
 
 // ── 11. ADMIN ORDERS ──────────────────────────────────────────────────────────
 const ordersListEl     = document.getElementById('orders-list');
@@ -1317,5 +1728,18 @@ function stopChatPolling() {
   chatPollTimer = null;
 }
 
+// ── Periodic Dashboard Refresh ───────────────────────────────────────────────
+setInterval(async () => {
+  if (tabDashboard && tabDashboard.classList.contains('active') && getAdminToken()) {
+    await loadDashboard();
+  }
+}, 12000);
+
 // ── Initial Render ────────────────────────────────────────────────────────────
-renderProductsTable();
+if (tabDashboard && panelDashboard) {
+  setTab(tabDashboard, panelDashboard);
+  loadDashboard();
+} else {
+  renderProductsTable();
+}
+

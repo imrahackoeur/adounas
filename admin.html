@@ -47,19 +47,189 @@
 
       <!-- Tab Nav -->
       <div class="admin-tabs">
-        <button class="admin-tab active" data-tab="products" id="tab-products">📦 Products</button>
-        <button class="admin-tab" data-tab="messages" id="tab-messages">
-          💬 Messages
-          <span class="admin-msg-badge" id="admin-msg-badge" style="display:none">0</span>
-        </button>
+        <button class="admin-tab active" data-tab="dashboard" id="tab-dashboard">📊 Dashboard</button>
+        <button class="admin-tab" data-tab="products" id="tab-products">📦 Products</button>
         <button class="admin-tab" data-tab="orders" id="tab-orders">
           📝 Orders
           <span class="admin-msg-badge" id="admin-orders-badge" style="display:none">0</span>
         </button>
+        <button class="admin-tab" data-tab="messages" id="tab-messages">
+          💬 Messages
+          <span class="admin-msg-badge" id="admin-msg-badge" style="display:none">0</span>
+        </button>
       </div>
 
+      <!-- ── DASHBOARD PANEL ─────────────────────────────────── -->
+      <main class="admin-panel" id="panel-dashboard">
+        <div class="dash-header-bar">
+          <div>
+            <h1 class="page-title">Tableau de Bord</h1>
+            <p class="page-subtitle" id="dash-date-indicator">Aperçu en temps réel · Ventes & Activité (Sénégal / FCFA)</p>
+          </div>
+          <div class="table-header-actions">
+            <button type="button" class="btn btn-secondary" id="btn-dash-refresh">
+              <span>🔄 Actualiser</span>
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-dash-quick-import">
+              <span>⚡ Importer Produit</span>
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-dash-add-product">
+              <span>➕ Nouveau Produit</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Metrics Cards Row -->
+        <div class="dash-metrics-grid">
+          <!-- Metric 1: Revenue -->
+          <div class="shopify-card dash-kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Chiffre d'Affaires</span>
+              <span class="kpi-icon-pill icon-revenue">💰</span>
+            </div>
+            <div class="kpi-value" id="dash-val-revenue">0 FCFA</div>
+            <div class="kpi-subtext" id="dash-sub-revenue">Total des commandes validées</div>
+          </div>
+
+          <!-- Metric 2: Total Orders -->
+          <div class="shopify-card dash-kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Commandes Totales</span>
+              <span class="kpi-icon-pill icon-orders">🛍️</span>
+            </div>
+            <div class="kpi-value" id="dash-val-orders">0</div>
+            <div class="kpi-badges-row" id="dash-orders-breakdown">
+              <span class="kpi-chip chip-pending" id="dash-chip-pending">0 en attente</span>
+              <span class="kpi-chip chip-confirmed" id="dash-chip-confirmed">0 confirmées</span>
+            </div>
+          </div>
+
+          <!-- Metric 3: Products & Stock -->
+          <div class="shopify-card dash-kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Catalogue & Stock</span>
+              <span class="kpi-icon-pill icon-products">📦</span>
+            </div>
+            <div class="kpi-value" id="dash-val-products">0 <span class="kpi-unit">articles</span></div>
+            <div class="kpi-subtext" id="dash-val-stock">0 unités totales en stock</div>
+          </div>
+
+          <!-- Metric 4: Average Order Value (AOV) -->
+          <div class="shopify-card dash-kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Panier Moyen (AOV)</span>
+              <span class="kpi-icon-pill icon-aov">📈</span>
+            </div>
+            <div class="kpi-value" id="dash-val-aov">0 FCFA</div>
+            <div class="kpi-subtext">Moyenne par commande client</div>
+          </div>
+
+          <!-- Metric 5: Customer Messages -->
+          <div class="shopify-card dash-kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Discussions Clients</span>
+              <span class="kpi-icon-pill icon-chat">💬</span>
+            </div>
+            <div class="kpi-value" id="dash-val-chats">0</div>
+            <div class="kpi-subtext" id="dash-val-unread-chats">0 message non lu</div>
+          </div>
+        </div>
+
+        <!-- Charts & Analytics Section -->
+        <div class="dash-analytics-grid">
+          <!-- Chart 1: Sales Trends SVG Area Chart -->
+          <div class="shopify-card dash-chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 style="margin:0 0 0.25rem 0; font-size:1.05rem;">Évolution des Ventes (7 Derniers Jours)</h3>
+                <p style="margin:0; font-size:0.82rem; color:var(--text-muted);">Revenus cumulés des commandes par date</p>
+              </div>
+              <div class="chart-legend">
+                <span class="legend-dot dot-sales"></span> Ventes (FCFA)
+              </div>
+            </div>
+            <div class="chart-svg-container" id="dash-sales-chart-wrapper">
+              <!-- Rendered dynamically with SVG -->
+            </div>
+          </div>
+
+          <!-- Chart 2: Order Fulfillment Breakdown -->
+          <div class="shopify-card dash-fulfillment-card">
+            <h3 style="margin:0 0 0.25rem 0; font-size:1.05rem;">Statut des Commandes</h3>
+            <p style="margin:0 0 1rem 0; font-size:0.82rem; color:var(--text-muted);">Répartition du traitement logistique</p>
+            
+            <div class="fulfillment-bar-wrapper">
+              <div class="fulfillment-progress-bar" id="fulfillment-progress-bar">
+                <!-- Multi-segmented color bar -->
+              </div>
+            </div>
+
+            <div class="fulfillment-stats-list" id="fulfillment-stats-list">
+              <!-- Status chips & percentage breakdown -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Operational 2-Column Section: Recent Orders & Store Feed -->
+        <div class="dash-operational-grid">
+          
+          <!-- Column 1: Recent Orders Live Stream -->
+          <div class="shopify-card">
+            <div class="dash-section-header">
+              <div>
+                <h3 style="margin:0; font-size:1.05rem;">Dernières Commandes Reçues</h3>
+                <p style="margin:0; font-size:0.82rem; color:var(--text-muted);">Traitement rapide des commandes clients</p>
+              </div>
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-view-all-orders">
+                <span>Gérer les Commandes →</span>
+              </button>
+            </div>
+            
+            <div class="dash-recent-orders-list" id="dash-recent-orders-list">
+              <div style="padding:2rem; text-align:center; color:var(--text-muted);">Chargement des commandes...</div>
+            </div>
+          </div>
+
+          <!-- Column 2: Inventory Alerts & Top Products -->
+          <div class="dash-feed-col">
+            
+            <!-- Low Stock Warnings -->
+            <div class="shopify-card">
+              <div class="dash-section-header">
+                <div>
+                  <h3 style="margin:0; font-size:1.05rem;">⚠️ Alertes Stock Faible</h3>
+                  <p style="margin:0; font-size:0.82rem; color:var(--text-muted);">Moins de 5 unités restantes</p>
+                </div>
+              </div>
+              <div class="dash-low-stock-list" id="dash-low-stock-list">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Top Products Leaderboard -->
+            <div class="shopify-card" style="margin-top:1.25rem;">
+              <div class="dash-section-header">
+                <div>
+                  <h3 style="margin:0; font-size:1.05rem;">🏆 Produits les Plus Commandés</h3>
+                  <p style="margin:0; font-size:0.82rem; color:var(--text-muted);">Classement par volume de ventes</p>
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-view-all-products">
+                  <span>Voir Catalogue →</span>
+                </button>
+              </div>
+              <div class="dash-top-products-list" id="dash-top-products-list">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+
       <!-- ── PRODUCTS PANEL ─────────────────────────────────── -->
-      <main class="admin-panel" id="panel-products">
+      <main class="admin-panel" id="panel-products" style="display:none">
 
         <!-- 1. Products List View (Shopify Data Table) -->
         <div id="products-list-view">

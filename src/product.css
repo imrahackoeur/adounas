@@ -264,16 +264,55 @@
   font-size: 1.25rem;
 }
 
-/* Responsive */
+/* Responsive & Adaptive */
 @media (max-width: 900px) {
+  .pdp-container {
+    margin: calc(var(--navbar-h) + 1.25rem) auto 3rem;
+    padding: 0 1rem;
+  }
   .pdp-content {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1.5rem;
   }
   .pdp-title {
-    font-size: 2rem;
+    font-size: clamp(1.6rem, 6vw, 2.1rem);
   }
-  .pdp-container {
-    margin: 40px auto;
+  .pdp-thumbnails {
+    gap: 0.5rem;
+  }
+  .pdp-thumb {
+    width: 68px;
+    height: 68px;
+  }
+  .pdp-actions {
+    position: sticky;
+    bottom: calc(0.75rem + var(--safe-bottom));
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0.75rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    margin-bottom: 2rem;
+    z-index: 50;
+  }
+}
+
+@media (max-width: 420px) {
+  .pdp-actions {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  .pdp-qty-wrapper {
+    padding: 0 0.25rem;
+  }
+  .pdp-qty-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .pdp-add-btn {
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
   }
 }

@@ -626,11 +626,87 @@ h1,h2,h3,h4 { font-weight: 700; line-height: 1.25; color: var(--text); }
 .toast.success { border-left: 4px solid var(--success); }
 .toast.error   { border-left: 4px solid var(--danger); }
 
-/* ── Mobile Responsive ─────────────────────────────────────── */
+/* ── Mobile Responsive & Screen Adaptation ─────────────────── */
 @media (max-width: 860px) {
-  .shopify-layout { grid-template-columns: 1fr; }
-  .grid-3-col { grid-template-columns: 1fr; }
-  .grid-2-col { grid-template-columns: 1fr; }
-  .admin-panel { padding: 1rem; }
-  .table-search-group { min-width: 100%; }
+  .admin-header {
+    padding: 0 1rem;
+    height: 56px;
+  }
+  .admin-logo {
+    font-size: 1.15rem;
+  }
+  .admin-tabs {
+    padding: 0.5rem 1rem 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .admin-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .admin-tab {
+    padding: 0.6rem 0.85rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  .shopify-layout {
+    grid-template-columns: 1fr;
+  }
+  .grid-3-col {
+    grid-template-columns: 1fr;
+  }
+  .grid-2-col {
+    grid-template-columns: 1fr;
+  }
+  .admin-panel {
+    padding: 1rem 0.75rem;
+  }
+  .table-search-group {
+    min-width: 100%;
+  }
+  .table-header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .table-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .table-header-actions .btn {
+    flex: 1;
+  }
+  .editor-top-bar {
+    top: 56px;
+    padding: 0.5rem 0;
+  }
+  .editor-page-title {
+    font-size: 1.1rem;
+  }
+  .shopify-card {
+    padding: 1rem;
+  }
+  .admin-messages-panel {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 500px;
+    margin: 1rem auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-tabs {
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 0.25rem;
+  }
+  .table-tab {
+    white-space: nowrap;
+  }
+  .table-actions-cell {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .btn-table-action {
+    padding: 0.25rem 0.45rem;
+    font-size: 0.72rem;
+  }
 }

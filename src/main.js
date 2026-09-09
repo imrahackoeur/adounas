@@ -1,4 +1,5 @@
 import './style.css'
+import './adaptive.js'
 import { initAuth, getCurrentUser, openAuthModal, updateAuthUI } from './auth.js'
 
 // ── Currency Formatter (Senegal / FCFA) ──────────────────────────────────────

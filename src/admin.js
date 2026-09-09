@@ -1,4 +1,5 @@
 import './admin.css';
+import './adaptive.js';
 
 // ── Secure Server-Side Admin Authentication ──────────────────────────────────
 const TOKEN_KEY = 'solo_admin_token';

@@ -17,9 +17,73 @@ const app    = express();
 const PORT   = process.env.PORT || 3001;
 const CLIENT = process.env.CLIENT_URL || 'http://localhost:5173';
 
+// ── Security Headers & Baseline Hardening ─────────────────────────────────────
+app.disable('x-powered-by');
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '500kb' }));
+
+// ── Rate Limiting ─────────────────────────────────────────────────────────────
+const rateLimits = new Map(); // key -> { count, resetTime }
+
+function rateLimiter({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests, please try again later.' }) {
+  return (req, res, next) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+    const key = `${req.baseUrl || req.path}:${ip}`;
+    const now = Date.now();
+
+    let record = rateLimits.get(key);
+    if (!record || now > record.resetTime) {
+      record = { count: 1, resetTime: now + windowMs };
+      rateLimits.set(key, record);
+    } else {
+      record.count++;
+    }
+
+    res.setHeader('X-RateLimit-Limit', max);
+    res.setHeader('X-RateLimit-Remaining', Math.max(0, max - record.count));
+    res.setHeader('X-RateLimit-Reset', Math.ceil(record.resetTime / 1000));
+
+    if (record.count > max) {
+      return res.status(429).json({ error: message });
+    }
+    next();
+  };
+}
+
+// Cleanup stale rate limit records every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rateLimits.entries()) {
+    if (now > v.resetTime) rateLimits.delete(k);
+  }
+}, 10 * 60 * 1000);
+
+const adminLoginLimiter = rateLimiter({ windowMs: 15 * 60 * 1000, max: 5, message: 'Too many admin login attempts. Please wait 15 minutes.' });
+const authLimiter       = rateLimiter({ windowMs: 15 * 60 * 1000, max: 15, message: 'Too many authentication attempts. Please try again later.' });
+const orderLimiter      = rateLimiter({ windowMs: 10 * 60 * 1000, max: 6, message: 'Order limit reached. Please wait a few moments.' });
+const chatLimiter       = rateLimiter({ windowMs: 60 * 1000, max: 25, message: 'Message rate limit exceeded. Please slow down.' });
+
+// ── Sanitization Helper ───────────────────────────────────────────────────────
+function sanitizeText(str, maxLength = 255) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[<>]/g, '').trim().slice(0, maxLength);
+}
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
 
 // ── POST /api/create-checkout-session ─────────────────────────────────────────
 app.post('/api/create-checkout-session', async (req, res) => {
@@ -111,39 +175,45 @@ function loadUsers() { return loadJson(USERS_FILE, []); }
 function saveUsers(u) { saveJson(USERS_FILE, u); }
 
 // POST /api/auth/register
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', authLimiter, (req, res) => {
   const { name, email, password } = req.body;
-  if (!name || !email || !password)
+  const cleanName = sanitizeText(name, 80);
+  const cleanEmail = sanitizeText(email, 120).toLowerCase();
+
+  if (!cleanName || !cleanEmail || !password)
     return res.status(400).json({ error: 'Name, email and password are required.' });
-  if (password.length < 6)
-    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  if (!isValidEmail(cleanEmail))
+    return res.status(400).json({ error: 'Please provide a valid email address.' });
+  if (password.length < 6 || password.length > 128)
+    return res.status(400).json({ error: 'Password must be between 6 and 128 characters.' });
 
   const users = loadUsers();
-  if (users.find(u => u.email.toLowerCase() === email.toLowerCase()))
+  if (users.find(u => u.email.toLowerCase() === cleanEmail))
     return res.status(409).json({ error: 'An account with this email already exists.' });
 
-  const user = { id: Date.now().toString(), name: name.trim(), email: email.toLowerCase().trim(), passwordHash: hashPw(password), createdAt: Date.now() };
+  const user = { id: Date.now().toString(), name: cleanName, email: cleanEmail, passwordHash: hashPw(password), createdAt: Date.now() };
   users.push(user);
   saveUsers(users);
 
   const token = genToken();
-  sessions[token] = { userId: user.id, email: user.email, name: user.name };
+  sessions[token] = { userId: user.id, email: user.email, name: user.name, createdAt: Date.now() };
   res.json({ ok: true, token, user: { id: user.id, name: user.name, email: user.email } });
 });
 
 // POST /api/auth/login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', authLimiter, (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password)
+  const cleanEmail = sanitizeText(email, 120).toLowerCase();
+  if (!cleanEmail || !password)
     return res.status(400).json({ error: 'Email and password are required.' });
 
   const users = loadUsers();
-  const user  = users.find(u => u.email === email.toLowerCase().trim());
+  const user  = users.find(u => u.email === cleanEmail);
   if (!user || user.passwordHash !== hashPw(password))
     return res.status(401).json({ error: 'Incorrect email or password.' });
 
   const token = genToken();
-  sessions[token] = { userId: user.id, email: user.email, name: user.name };
+  sessions[token] = { userId: user.id, email: user.email, name: user.name, createdAt: Date.now() };
   res.json({ ok: true, token, user: { id: user.id, name: user.name, email: user.email } });
 });
 
@@ -162,33 +232,37 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Admin Authentication ──────────────────────────────────────────────────────
+// ── Admin Authentication (with 24h expiration) ──────────────────────────────
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'solo2026';
-const adminSessions  = new Set();
+const adminSessions  = new Map(); // token -> expiresAt (timestamp)
+const ADMIN_SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 function adminAuth(req, res, next) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
-  if (!token || !adminSessions.has(token)) {
-    return res.status(401).json({ error: 'Unauthorized: Admin authentication required.' });
+  const expiresAt = adminSessions.get(token);
+  if (!token || !expiresAt || Date.now() > expiresAt) {
+    if (token) adminSessions.delete(token);
+    return res.status(401).json({ error: 'Unauthorized: Admin session expired or invalid.' });
   }
   next();
 }
 
-// POST /api/admin/login
-app.post('/api/admin/login', (req, res) => {
+// POST /api/admin/login (with strict rate limit)
+app.post('/api/admin/login', adminLoginLimiter, (req, res) => {
   const { password } = req.body;
   if (!password || password !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Incorrect admin password.' });
   }
   const token = 'adm_' + genToken();
-  adminSessions.add(token);
+  adminSessions.set(token, Date.now() + ADMIN_SESSION_DURATION);
   res.json({ ok: true, token });
 });
 
 // GET /api/admin/verify
 app.get('/api/admin/verify', (req, res) => {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
-  if (token && adminSessions.has(token)) {
+  const expiresAt = adminSessions.get(token);
+  if (token && expiresAt && Date.now() < expiresAt) {
     return res.json({ ok: true });
   }
   res.status(401).json({ error: 'Invalid or expired admin session.' });
@@ -229,19 +303,24 @@ function loadChats() { return loadJson(CHATS_FILE, {}); }
 function saveChats(d) { saveJson(CHATS_FILE, d); }
 
 // ── POST /api/chat/send ────────────────────────────────────────────────────────
-app.post('/api/chat/send', (req, res) => {
+app.post('/api/chat/send', chatLimiter, (req, res) => {
   const { chatId, sender, text, name } = req.body;
-  if (!chatId || !sender || !text) return res.status(400).json({ error: 'Missing fields' });
+  const cleanChatId = sanitizeText(chatId, 100);
+  const cleanSender = sender === 'admin' ? 'admin' : 'customer';
+  const cleanText   = sanitizeText(text, 1000);
+  const cleanName   = sanitizeText(name, 80) || 'Customer';
+
+  if (!cleanChatId || !cleanText) return res.status(400).json({ error: 'Missing fields' });
 
   const chats = loadChats();
-  if (!chats[chatId]) {
-    chats[chatId] = { chatId, name: name || 'Customer', messages: [], createdAt: Date.now(), unread: 0 };
+  if (!chats[cleanChatId]) {
+    chats[cleanChatId] = { chatId: cleanChatId, name: cleanName, messages: [], createdAt: Date.now(), unread: 0 };
   }
 
-  const msg = { id: Date.now(), sender, text, ts: Date.now() };
-  chats[chatId].messages.push(msg);
-  if (sender === 'customer') chats[chatId].unread = (chats[chatId].unread || 0) + 1;
-  else chats[chatId].unread = 0;
+  const msg = { id: Date.now(), sender: cleanSender, text: cleanText, ts: Date.now() };
+  chats[cleanChatId].messages.push(msg);
+  if (cleanSender === 'customer') chats[cleanChatId].unread = (chats[cleanChatId].unread || 0) + 1;
+  else chats[cleanChatId].unread = 0;
 
   saveChats(chats);
   res.json({ ok: true, msg });
@@ -249,10 +328,10 @@ app.post('/api/chat/send', (req, res) => {
 
 // ── GET /api/chat/sync ─────────────────────────────────────────────────────────
 app.get('/api/chat/sync', (req, res) => {
-  const { chatId } = req.query;
-  if (!chatId) return res.status(400).json({ error: 'Missing chatId' });
+  const cleanChatId = sanitizeText(req.query.chatId, 100);
+  if (!cleanChatId) return res.status(400).json({ error: 'Missing chatId' });
   const chats = loadChats();
-  const chat = chats[chatId] || { messages: [] };
+  const chat = chats[cleanChatId] || { messages: [] };
   res.json({ messages: chat.messages });
 });
 
@@ -271,10 +350,10 @@ app.get('/api/chat/all', adminAuth, (_, res) => {
 
 // ── GET /api/chat/thread  (admin only) ────────────────────────────────────────
 app.get('/api/chat/thread', adminAuth, (req, res) => {
-  const { chatId } = req.query;
-  if (!chatId) return res.status(400).json({ error: 'Missing chatId' });
+  const cleanChatId = sanitizeText(req.query.chatId, 100);
+  if (!cleanChatId) return res.status(400).json({ error: 'Missing chatId' });
   const chats = loadChats();
-  const chat = chats[chatId];
+  const chat = chats[cleanChatId];
   if (!chat) return res.status(404).json({ error: 'Chat not found' });
   chat.unread = 0;
   saveChats(chats);
@@ -298,7 +377,7 @@ async function sendTelegramAlert(order) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return;
 
-  const itemsList = order.items.map(i => `  • ${i.name} × ${i.qty} ($${(i.price * i.qty).toFixed(2)})`).join('\n');
+  const itemsList = order.items.map(i => `  • ${sanitizeText(i.name, 60)} × ${i.qty} ($${(Number(i.price) * i.qty).toFixed(2)})`).join('\n');
   const cleanPhone = (order.customer.phone || '').replace(/[^0-9+]/g, '');
 
   const text = `🛍️ *NEW ORDER RECEIVED!*
@@ -333,19 +412,42 @@ ${itemsList}
   }
 }
 
-// ── POST /api/orders ───────────────────────────────────────────────────────────
-app.post('/api/orders', async (req, res) => {
+// ── POST /api/orders (with rate limiter and input validation) ──────────────────
+app.post('/api/orders', orderLimiter, async (req, res) => {
   const { customer, items, total } = req.body;
-  if (!customer || !items || items.length === 0) {
+  if (!customer || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Invalid order data.' });
   }
+
+  const cleanCustomer = {
+    name: sanitizeText(customer.name, 80),
+    phone: sanitizeText(customer.phone, 30),
+    location: sanitizeText(customer.location, 160),
+    email: sanitizeText(customer.email, 120),
+    userId: sanitizeText(customer.userId, 60),
+  };
+
+  if (!cleanCustomer.name || !cleanCustomer.phone || !cleanCustomer.location) {
+    return res.status(400).json({ error: 'Customer name, phone and delivery address are required.' });
+  }
+
+  const cleanItems = items.map(i => ({
+    id: i.id,
+    name: sanitizeText(i.name, 100),
+    price: Math.max(0, Number(i.price) || 0),
+    qty: Math.max(1, Math.min(99, parseInt(i.qty) || 1)),
+    image: sanitizeText(i.image, 300)
+  }));
+
+  const calcTotal = cleanItems.reduce((s, i) => s + i.price * i.qty, 0);
+
   const orders = loadOrders();
   const orderId = 'ORD-' + Date.now();
   const order = {
     orderId,
-    customer,   // { name, phone, location }
-    items,
-    total,
+    customer: cleanCustomer,
+    items: cleanItems,
+    total: calcTotal || Math.max(0, Number(total) || 0),
     status: 'pending',
     createdAt: Date.now(),
   };
@@ -354,6 +456,7 @@ app.post('/api/orders', async (req, res) => {
 
   // Send instant Telegram alert asynchronously
   sendTelegramAlert(order).catch(() => {});
+
 
   res.json({ ok: true, orderId });
 });

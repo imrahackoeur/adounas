@@ -2,84 +2,188 @@ import './style.css';
 import './product.css';
 import './adaptive.js';
 
+// ── Currency Formatter (Senegal / FCFA) ──────────────────────────────────────
 function formatFCFA(amount) {
   const num = Math.round(Number(amount) || 0);
   return `${num.toLocaleString('fr-FR')} FCFA`;
 }
 
-// Reuse localStorage getters from main logic via global if needed, but best to re-import or redefine
+// ── Fallback Seed Products ───────────────────────────────────────────────────
+const SEED_PRODUCTS = [
+  {
+    id: 1,
+    name: 'Solo Obsidian Backpack',
+    price: 35000,
+    comparePrice: 45000,
+    category: 'Bags',
+    desc: 'Sac à dos en cuir mat haut de gamme conçu pour les minimalistes. Résistant aux intempéries et idéal pour un usage quotidien à Dakar.',
+    image: '/bag.png',
+    images: ['/bag.png'],
+    stock: 25,
+    status: 'active',
+    vendor: 'Solo Dakar',
+    sku: 'SLO-BP-001'
+  },
+  {
+    id: 2,
+    name: 'Solo Chronos Watch',
+    price: 55000,
+    comparePrice: 65000,
+    category: 'Accessories',
+    desc: 'L’esthétique sombre rencontre l’ingénierie de précision. Une montre minimaliste avec une finition noir furtif.',
+    image: '/watch.png',
+    images: ['/watch.png'],
+    stock: 15,
+    status: 'active',
+    vendor: 'Solo Dakar',
+    sku: 'SLO-WT-002'
+  }
+];
+
 function loadProducts() {
   const s = localStorage.getItem('solo_products');
-  return s ? JSON.parse(s) : [];
+  if (s) {
+    try {
+      let prods = JSON.parse(s);
+      let migrated = false;
+      prods = prods.map(p => {
+        if (p.price && p.price < 1000) {
+          migrated = true;
+          return {
+            ...p,
+            price: Math.round(p.price * 600),
+            comparePrice: p.comparePrice ? Math.round(p.comparePrice * 600) : null
+          };
+        }
+        return p;
+      });
+      if (migrated) localStorage.setItem('solo_products', JSON.stringify(prods));
+      if (prods.length > 0) return prods;
+    } catch {}
+  }
+  localStorage.setItem('solo_products', JSON.stringify(SEED_PRODUCTS));
+  return SEED_PRODUCTS;
 }
 
+// ── Read URL Query & Find Product ────────────────────────────────────────────
 const params = new URLSearchParams(window.location.search);
-const productId = parseInt(params.get('id'));
+const productId = parseInt(params.get('id')) || 1;
 
 const products = loadProducts();
-const product = products.find(p => p.id === productId);
+const product = products.find(p => p.id === productId) || products[0];
 
-const loadingEl = document.getElementById('pdp-loading');
-const contentEl = document.getElementById('pdp-content');
+const loadingEl   = document.getElementById('pdp-loading');
+const contentEl   = document.getElementById('pdp-content');
 
 if (!product) {
-  loadingEl.innerHTML = `<h2>Produit non trouvé</h2><a href="/" style="color:var(--accent)">← Retour à la boutique</a>`;
+  loadingEl.innerHTML = `
+    <h2>Produit non trouvé</h2>
+    <p style="color:var(--text-muted);margin:1rem 0;">Ce produit n'est plus disponible ou a été déplacé.</p>
+    <a href="/" class="btn btn-primary">← Retour à la boutique</a>
+  `;
 } else {
-  // Populate meta tags for SEO (client side simulation)
-  document.title = `${product.name} | Solo`;
+  // Page Title & Meta
+  document.title = `${product.name} | Adounas`;
 
-  // Render product details
+  // Breadcrumbs
+  const bcCategory = document.getElementById('bc-category');
+  const bcTitle = document.getElementById('bc-title');
+  if (bcCategory) bcCategory.textContent = product.category || 'Boutique';
+  if (bcTitle) bcTitle.textContent = product.name;
+
+  // Title, Category & Vendor
   document.getElementById('pdp-title').textContent = product.name;
+  document.getElementById('pdp-category').textContent = product.category || 'Solo';
   
-  // Category & Vendor
-  document.getElementById('pdp-category').textContent = product.category || '';
   const vendorEl = document.getElementById('pdp-vendor');
-  if (product.vendor && vendorEl) {
-    vendorEl.textContent = `· ${product.vendor}`;
+  if (vendorEl) {
+    vendorEl.textContent = product.vendor ? `· ${product.vendor}` : '· Adounas';
   }
 
   // SKU
   const skuEl = document.getElementById('pdp-sku');
-  if (product.sku && skuEl) {
-    skuEl.textContent = `SKU: ${product.sku}`;
-    skuEl.style.display = 'block';
+  if (skuEl) {
+    if (product.sku) {
+      skuEl.textContent = `SKU: ${product.sku}`;
+      skuEl.style.display = 'block';
+    } else {
+      skuEl.style.display = 'none';
+    }
   }
+
+  // Stock Status
+  const stockTextEl = document.getElementById('pdp-stock-text');
+  const stockStatusEl = document.getElementById('pdp-stock-status');
+  function updateStockUI(currentStock) {
+    if (!stockTextEl) return;
+    if (currentStock === 0) {
+      stockTextEl.textContent = 'Rupture de stock';
+      stockStatusEl.style.color = '#DC2626';
+      stockStatusEl.style.background = '#FEE2E2';
+    } else if (currentStock <= 5) {
+      stockTextEl.textContent = `Plus que ${currentStock} articles disponibles !`;
+      stockStatusEl.style.color = '#D97706';
+      stockStatusEl.style.background = '#FEF3C7';
+    } else {
+      stockTextEl.textContent = 'En stock (Livraison 24h à Dakar)';
+      stockStatusEl.style.color = '#15803D';
+      stockStatusEl.style.background = '#DCFCE7';
+    }
+  }
+
+  updateStockUI(product.stock !== undefined ? product.stock : 20);
 
   // Pricing & Sale Badge
   const priceEl = document.getElementById('pdp-price');
   const compareEl = document.getElementById('pdp-compare-price');
   const saleBadge = document.getElementById('pdp-sale-badge');
+  const floatBadge = document.getElementById('pdp-promo-badge-float');
 
   function updatePriceDisplay(currentPrice, comparePrice) {
-    priceEl.textContent = formatFCFA(currentPrice);
+    if (priceEl) priceEl.textContent = formatFCFA(currentPrice);
+    
     if (comparePrice && Number(comparePrice) > Number(currentPrice)) {
-      compareEl.textContent = formatFCFA(comparePrice);
-      compareEl.style.display = 'block';
+      if (compareEl) {
+        compareEl.textContent = formatFCFA(comparePrice);
+        compareEl.style.display = 'inline-block';
+      }
       const pct = Math.round(((comparePrice - currentPrice) / comparePrice) * 100);
-      saleBadge.textContent = `${pct}% PROMO`;
-      saleBadge.style.display = 'inline-block';
+      const discountText = `${pct}% PROMO`;
+      if (saleBadge) {
+        saleBadge.textContent = discountText;
+        saleBadge.style.display = 'inline-block';
+      }
+      if (floatBadge) {
+        floatBadge.textContent = discountText;
+        floatBadge.style.display = 'block';
+      }
     } else {
-      compareEl.style.display = 'none';
-      saleBadge.style.display = 'none';
+      if (compareEl) compareEl.style.display = 'none';
+      if (saleBadge) saleBadge.style.display = 'none';
+      if (floatBadge) floatBadge.style.display = 'none';
     }
+
+    // Update sticky price
+    const stickyPriceEl = document.getElementById('sticky-price');
+    if (stickyPriceEl) stickyPriceEl.textContent = formatFCFA(currentPrice);
   }
 
   let activePrice = product.price;
-  let activeStock = product.stock;
+  let activeStock = product.stock !== undefined ? product.stock : 20;
   let selectedVariant = null;
 
   updatePriceDisplay(product.price, product.comparePrice);
 
   // Description
-  document.getElementById('pdp-desc').textContent = product.desc || '';
+  const descEl = document.getElementById('pdp-desc');
+  if (descEl) descEl.textContent = product.desc || 'Produit de qualité supérieure certifié Adounas.';
 
-  // Variants Selector (Shopify Options)
+  // Variants Selector (Options: Taille, Couleur, Modèle)
   const variantsContainer = document.getElementById('pdp-variants-container');
   if (product.hasVariants && product.options && product.options.length > 0 && product.variants && product.variants.length > 0) {
     variantsContainer.style.display = 'flex';
     const selectedOptions = {};
 
-    // Default to first value for each option
     product.options.forEach(opt => {
       selectedOptions[opt.name] = (opt.values && opt.values[0]) || '';
     });
@@ -92,13 +196,18 @@ if (!product) {
         activePrice = match.price !== undefined ? match.price : product.price;
         activeStock = match.stock !== undefined ? match.stock : product.stock;
         updatePriceDisplay(activePrice, product.comparePrice);
-        if (skuEl && match.sku) skuEl.textContent = `SKU: ${match.sku}`;
+        updateStockUI(activeStock);
+        if (skuEl && match.sku) {
+          skuEl.textContent = `SKU: ${match.sku}`;
+          skuEl.style.display = 'block';
+        }
       }
+      updateWhatsAppLink();
     }
 
     variantsContainer.innerHTML = product.options.map(opt => `
       <div class="pdp-option-group" data-option="${opt.name}">
-        <div class="pdp-option-header">${opt.name}: <span class="pdp-option-selected-val" style="font-weight:700;">${selectedOptions[opt.name]}</span></div>
+        <div class="pdp-option-header">${opt.name}: <span class="pdp-option-selected-val" style="font-weight:700;color:var(--accent);">${selectedOptions[opt.name]}</span></div>
         <div class="pdp-option-pills">
           ${(opt.values || []).map((val, idx) => `
             <button type="button" class="pdp-option-pill ${idx === 0 ? 'active' : ''}" data-option="${opt.name}" data-val="${val}">
@@ -129,100 +238,205 @@ if (!product) {
 
   // Gallery
   const mainImage = document.getElementById('pdp-main-image');
-  const images = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
-  
-  mainImage.src = images[0] || 'https://placehold.co/600x600/F0EFFF/4F46E5?text=No+Image';
+  const rawImages = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
+  const images = rawImages.length > 0 ? rawImages : ['https://placehold.co/600x600/F0EFFF/4F46E5?text=Adounas'];
+
+  if (mainImage) mainImage.src = images[0];
+
+  // Update sticky thumbnail
+  const stickyThumb = document.getElementById('sticky-bar-thumb');
+  const stickyTitle = document.getElementById('sticky-title');
+  if (stickyThumb) stickyThumb.src = images[0];
+  if (stickyTitle) stickyTitle.textContent = product.name;
 
   const thumbsEl = document.getElementById('pdp-thumbnails');
-  if (images.length > 1) {
+  if (images.length > 1 && thumbsEl) {
     thumbsEl.innerHTML = images.map((img, i) => `
-      <img src="${img}" class="pdp-thumb ${i===0?'active':''}" data-src="${img}" alt="Thumbnail ${i}">
+      <img src="${img}" class="pdp-thumb ${i === 0 ? 'active' : ''}" data-src="${img}" alt="${product.name} ${i + 1}">
     `).join('');
 
     thumbsEl.querySelectorAll('.pdp-thumb').forEach(thumb => {
-      thumb.addEventListener('click', e => {
-        mainImage.src = thumb.dataset.src;
+      thumb.addEventListener('click', () => {
+        if (mainImage) mainImage.src = thumb.dataset.src;
         thumbsEl.querySelectorAll('.pdp-thumb').forEach(t => t.classList.remove('active'));
         thumb.classList.add('active');
       });
     });
-  } else {
+  } else if (thumbsEl) {
     thumbsEl.style.display = 'none';
   }
 
   // Quantity controls
   let qty = 1;
   const qtyVal = document.getElementById('pdp-qty-val');
-  
-  if (product.stock === 0) {
-    document.getElementById('pdp-qty-minus').disabled = true;
-    document.getElementById('pdp-qty-plus').disabled = true;
-    qtyVal.textContent = 0;
+  const qtyMinus = document.getElementById('pdp-qty-minus');
+  const qtyPlus = document.getElementById('pdp-qty-plus');
+
+  if (activeStock === 0) {
+    if (qtyMinus) qtyMinus.disabled = true;
+    if (qtyPlus) qtyPlus.disabled = true;
+    if (qtyVal) qtyVal.textContent = 0;
   } else {
-    document.getElementById('pdp-qty-minus').addEventListener('click', () => {
-      if (qty > 1) { qty--; qtyVal.textContent = qty; }
-    });
-    document.getElementById('pdp-qty-plus').addEventListener('click', () => {
-      if (activeStock !== undefined && activeStock !== null && qty >= activeStock) {
-        alert(`Sorry, only ${activeStock} units available in stock.`);
-        return;
-      }
-      qty++; qtyVal.textContent = qty;
-    });
+    if (qtyMinus) {
+      qtyMinus.addEventListener('click', () => {
+        if (qty > 1) { qty--; if (qtyVal) qtyVal.textContent = qty; updateWhatsAppLink(); }
+      });
+    }
+    if (qtyPlus) {
+      qtyPlus.addEventListener('click', () => {
+        if (activeStock !== undefined && activeStock !== null && qty >= activeStock) {
+          alert(`Désolé, seulement ${activeStock} unités sont disponibles en stock.`);
+          return;
+        }
+        qty++;
+        if (qtyVal) qtyVal.textContent = qty;
+        updateWhatsAppLink();
+      });
+    }
   }
 
-  // Add to cart
+  // WhatsApp Button updater
+  const waBtn = document.getElementById('pdp-whatsapp-btn');
+  function updateWhatsAppLink() {
+    if (!waBtn) return;
+    const variantText = selectedVariant ? ` (${selectedVariant.title})` : '';
+    const msg = encodeURIComponent(`Bonjour Adounas! Je souhaite commander le produit *${product.name}${variantText}* (Quantité: ${qty}, Prix: ${formatFCFA(activePrice * qty)}). Pouvez-vous me livrer à Dakar?`);
+    waBtn.href = `https://wa.me/221770000000?text=${msg}`;
+  }
+  updateWhatsAppLink();
+
+  // Add to cart helper
+  function addItemToCart(shouldOpenDrawer = false) {
+    const cart = getCart();
+    const itemKey = selectedVariant ? `${product.id}_${selectedVariant.title}` : product.id;
+    const existing = cart.find(c => (c.variantKey ? c.variantKey === itemKey : c.id === product.id));
+    const currentQty = existing ? existing.qty : 0;
+
+    if (activeStock !== undefined && activeStock !== null && currentQty + qty > activeStock) {
+      alert(`Désolé, vous avez déjà ${currentQty} article(s) dans votre panier et il ne reste que ${activeStock} unité(s).`);
+      return false;
+    }
+
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      cart.push({
+        id: product.id,
+        variantKey: itemKey,
+        variantTitle: selectedVariant ? selectedVariant.title : null,
+        price: activePrice,
+        name: selectedVariant ? `${product.name} (${selectedVariant.title})` : product.name,
+        image: images[0] || product.image,
+        qty
+      });
+    }
+
+    saveCart(cart);
+
+    if (shouldOpenDrawer) {
+      openCart();
+    }
+    return true;
+  }
+
+  // Add to Cart Button
   const addBtn = document.getElementById('pdp-add-btn');
-  if (product.stock === 0) {
-    addBtn.textContent = 'Sold Out';
-    addBtn.disabled = true;
-    addBtn.style.background = 'var(--border)';
-    addBtn.style.color = 'var(--text-muted)';
-    addBtn.style.cursor = 'not-allowed';
+  const buyNowBtn = document.getElementById('pdp-buynow-btn');
+  const stickyBuyBtn = document.getElementById('sticky-buy-btn');
+
+  if (activeStock === 0) {
+    if (addBtn) {
+      addBtn.textContent = 'Rupture de Stock';
+      addBtn.disabled = true;
+    }
+    if (buyNowBtn) buyNowBtn.style.display = 'none';
+    if (stickyBuyBtn) stickyBuyBtn.disabled = true;
   } else {
-    addBtn.addEventListener('click', () => {
-      const cart = JSON.parse(localStorage.getItem('solo_cart') || '[]');
-      const itemKey = selectedVariant ? `${product.id}_${selectedVariant.title}` : product.id;
-      const existing = cart.find(c => (c.variantKey ? c.variantKey === itemKey : c.id === product.id));
-      const currentQty = existing ? existing.qty : 0;
-      
-      if (activeStock !== undefined && activeStock !== null && currentQty + qty > activeStock) {
-        alert(`Sorry, you already have ${currentQty} in your cart, and only ${activeStock} are available.`);
-        return;
-      }
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        if (addItemToCart(false)) {
+          const orig = addBtn.innerHTML;
+          addBtn.innerHTML = '<span>✓ Ajouté au Panier !</span>';
+          addBtn.style.background = '#10B981';
+          addBtn.style.color = '#FFFFFF';
+          setTimeout(() => {
+            addBtn.innerHTML = orig;
+            addBtn.style.background = '';
+            addBtn.style.color = '';
+          }, 1400);
+        }
+      });
+    }
 
-      if (existing) {
-        existing.qty += qty;
-      } else {
-        cart.push({
-          id: product.id,
-          variantKey: itemKey,
-          variantTitle: selectedVariant ? selectedVariant.title : null,
-          price: activePrice,
-          name: selectedVariant ? `${product.name} (${selectedVariant.title})` : product.name,
-          image: images[0] || product.image,
-          qty
-        });
-      }
-      
-      localStorage.setItem('solo_cart', JSON.stringify(cart));
-      
-      // Animate button
-      const orig = addBtn.textContent;
-      addBtn.textContent = '✓ Added to Cart';
-      addBtn.style.background = 'var(--success)';
-      setTimeout(() => {
-        addBtn.textContent = orig;
-        addBtn.style.background = '';
-      }, 1200);
+    // Direct Buy Now Button (1-Click Direct Purchase)
+    if (buyNowBtn) {
+      buyNowBtn.addEventListener('click', () => {
+        if (addItemToCart(true)) {
+          const nameInput = document.getElementById('delivery-name');
+          if (nameInput) nameInput.focus();
+        }
+      });
+    }
 
-      if (window.updateCartUI) window.updateCartUI();
-      if (window.openCartFn) window.openCartFn();
-    });
+    if (stickyBuyBtn) {
+      stickyBuyBtn.addEventListener('click', () => {
+        if (addItemToCart(true)) {
+          const nameInput = document.getElementById('delivery-name');
+          if (nameInput) nameInput.focus();
+        }
+      });
+    }
   }
 
+  // ── Related Products ─────────────────────────────────────────────────────────
+  const relatedSection = document.getElementById('pdp-related-section');
+  const relatedGrid = document.getElementById('pdp-related-grid');
+  const otherProducts = products.filter(p => p.id !== product.id);
+
+  if (otherProducts.length > 0 && relatedSection && relatedGrid) {
+    relatedSection.style.display = 'block';
+    relatedGrid.innerHTML = otherProducts.slice(0, 4).map(p => {
+      const pImg = (p.images && p.images[0]) || p.image || 'https://placehold.co/400x400';
+      const hasPromo = p.comparePrice && Number(p.comparePrice) > Number(p.price);
+      return `
+        <div class="product-card">
+          <a href="/product.html?id=${p.id}" class="product-image-link">
+            <div class="product-image-wrapper">
+              <img src="${pImg}" alt="${p.name}" loading="lazy">
+              ${hasPromo ? '<span class="promo-badge">PROMO</span>' : ''}
+            </div>
+          </a>
+          <div class="product-info">
+            <span class="product-category">${p.category || 'Solo'}</span>
+            <h3 class="product-title"><a href="/product.html?id=${p.id}">${p.name}</a></h3>
+            <div class="product-price-row">
+              <span class="product-price">${formatFCFA(p.price)}</span>
+              ${hasPromo ? `<span class="product-compare-price">${formatFCFA(p.comparePrice)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Show Main Container
   loadingEl.style.display = 'none';
   contentEl.style.display = 'grid';
+}
+
+// ── Sticky Mobile Bar Scroll Observer ─────────────────────────────────────────
+const stickyBar = document.getElementById('sticky-buy-bar');
+const actionsCard = document.querySelector('.pdp-actions-card');
+
+if (stickyBar && actionsCard) {
+  window.addEventListener('scroll', () => {
+    const rect = actionsCard.getBoundingClientRect();
+    if (rect.bottom < 0) {
+      stickyBar.classList.add('visible');
+    } else {
+      stickyBar.classList.remove('visible');
+    }
+  }, { passive: true });
 }
 
 // ── Cart Sidebar & Badge Management for PDP ──────────────────────────────────
@@ -357,7 +571,7 @@ if (cartIconEl) cartIconEl.addEventListener('click', openCart);
 if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
 if (overlay) overlay.addEventListener('click', closeCart);
 
-// Checkout handler on PDP
+// Checkout handler on PDP (with 100% Guest Checkout)
 if (checkoutBtn) {
   checkoutBtn.addEventListener('click', async () => {
     const cart = getCart();
@@ -448,17 +662,17 @@ if (btnGps && locInput) {
       if (gpsStatus) {
         gpsStatus.style.display = 'block';
         gpsStatus.className = 'gps-status error';
-        gpsStatus.textContent = '❌ Geolocation is not supported by your browser.';
+        gpsStatus.textContent = '❌ La géolocalisation n’est pas supportée par votre navigateur.';
       }
       return;
     }
 
     btnGps.classList.add('loading');
-    if (gpsText) gpsText.textContent = 'Locating…';
+    if (gpsText) gpsText.textContent = 'Localisation…';
     if (gpsStatus) {
       gpsStatus.style.display = 'block';
       gpsStatus.className = 'gps-status';
-      gpsStatus.textContent = '📡 Detecting your current location…';
+      gpsStatus.textContent = '📡 Détection de votre position en cours…';
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -471,14 +685,14 @@ if (btnGps && locInput) {
             locInput.value = data.address;
             if (gpsStatus) {
               gpsStatus.className = 'gps-status';
-              gpsStatus.textContent = '✅ Location detected successfully!';
+              gpsStatus.textContent = '✅ Adresse détectée avec succès !';
               setTimeout(() => { if (gpsStatus) gpsStatus.style.display = 'none'; }, 3500);
             }
           }
         } catch {
           locInput.value = `GPS (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
           if (gpsStatus) {
-            gpsStatus.textContent = '✅ GPS coordinates captured.';
+            gpsStatus.textContent = '✅ Coordonnées GPS enregistrées.';
           }
         } finally {
           btnGps.classList.remove('loading');
@@ -491,11 +705,10 @@ if (btnGps && locInput) {
         if (gpsStatus) {
           gpsStatus.style.display = 'block';
           gpsStatus.className = 'gps-status error';
-          gpsStatus.textContent = '⚠️ Location permission denied or unavailable.';
+          gpsStatus.textContent = '⚠️ Accès à la position refusé ou indisponible.';
         }
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
   });
 }
-

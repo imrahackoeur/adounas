@@ -1,57 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
-    <title>Solo | Product Details</title>
+    <title>Détails du Produit | Adounas</title>
+    <meta name="description" content="Découvrez nos produits de qualité supérieure avec paiement à la livraison au Sénégal." />
+    <meta name="theme-color" content="#4F46E5" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   </head>
   <body>
 
     <!-- ── Navbar ────────────────────────────────────────── -->
     <nav class="navbar" id="navbar">
-      <a href="/" class="logo">Adouna Amoul Solo.</a>
+      <a href="/" class="logo">Adounas<span class="logo-dot">.</span></a>
 
       <div class="nav-links" id="nav-links">
+        <a href="/" class="nav-link">Accueil</a>
         <a href="/#products" class="nav-link">Boutique</a>
-        <a href="/suivi.html" class="nav-link" style="color:var(--accent);font-weight:700">📦 Suivi Commande</a>
+        <a href="/suivi.html" class="nav-link">📦 Suivi Commande</a>
         <a href="/admin.html" class="nav-link">Espace Vendeur</a>
       </div>
 
       <div class="nav-right">
         <!-- Search toggle -->
-        <button class="icon-btn" id="search-toggle" aria-label="Search">
+        <button class="icon-btn" id="search-toggle" aria-label="Recherche">
           <svg viewBox="0 0 24 24">
             <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" fill="none" />
           </svg>
         </button>
 
-        <!-- Account Button / Dropdown -->
-        <div class="nav-user-wrap">
-          <button class="nav-user-btn" id="nav-user-btn" aria-label="Account">
-            <svg viewBox="0 0 24 24" class="user-svg">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-            </svg>
-            <span class="nav-user-label" id="nav-user-label">Sign In</span>
-          </button>
-          <div class="nav-user-dropdown" id="nav-user-dropdown">
-            <div class="user-dropdown-header">
-              <div class="user-dropdown-name" id="user-dropdown-name">User</div>
-              <div class="user-dropdown-email" id="user-dropdown-email">user@email.com</div>
-            </div>
-            <button class="user-dropdown-item" id="user-logout-btn">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-              Sign Out
-            </button>
-          </div>
-        </div>
-
         <!-- Cart -->
-        <div class="cart-icon-wrapper" id="cart-icon" role="button" aria-label="Open cart">
+        <div class="cart-icon-wrapper" id="cart-icon" role="button" aria-label="Ouvrir le panier">
           <svg viewBox="0 0 24 24" class="cart-svg">
-            <path
-              d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 13.1 5.9 14 7 14h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.25 3H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
+            <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 13.1 5.9 14 7 14h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.25 3H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
           </svg>
           <span class="cart-count" id="cart-count">0</span>
         </div>
@@ -64,90 +48,180 @@
 
     <!-- ── Mobile Nav Drawer ─────────────────────────────── -->
     <div class="mobile-drawer" id="mobile-drawer">
-      <a href="/#products" class="mobile-nav-link" id="mob-shop">Boutique</a>
+      <a href="/" class="mobile-nav-link">Accueil</a>
+      <a href="/#products" class="mobile-nav-link">Boutique</a>
       <a href="/suivi.html" class="mobile-nav-link" style="color:var(--accent);font-weight:700">📦 Suivi Commande</a>
       <a href="/admin.html" class="mobile-nav-link">Espace Vendeur</a>
     </div>
 
-    <!-- ── Search Bar ────────────────────────────────────── -->
-    <div class="search-bar-wrapper" id="search-bar-wrapper">
-      <div class="search-bar-inner">
-        <svg viewBox="0 0 24 24" class="search-icon-inner">
-          <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" fill="none" />
-        </svg>
-        <input type="text" id="search-input" placeholder="Search products (e.g., Backpack)..." autocomplete="off">
-        <button id="search-clear" aria-label="Clear search">✕</button>
+    <!-- ── Product Detail Layout ─────────────────────────── -->
+    <main class="pdp-container" id="pdp-container">
+      
+      <!-- Breadcrumb -->
+      <nav class="pdp-breadcrumb" id="pdp-breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Accueil</a>
+        <span class="bc-sep">›</span>
+        <a href="/#products">Boutique</a>
+        <span class="bc-sep">›</span>
+        <span id="bc-category">Catégorie</span>
+        <span class="bc-sep">›</span>
+        <span class="bc-current" id="bc-title">Produit</span>
+      </nav>
+
+      <!-- Loading State -->
+      <div class="pdp-loading" id="pdp-loading">
+        <div class="spinner"></div>
+        <p>Chargement des détails du produit…</p>
+      </div>
+      
+      <!-- Main Content -->
+      <div class="pdp-content" id="pdp-content" style="display: none;">
+        
+        <!-- Left: Image Gallery -->
+        <div class="pdp-gallery">
+          <div class="pdp-main-image-wrap" id="pdp-main-image-wrap">
+            <img id="pdp-main-image" src="" alt="Produit Adounas">
+            <div class="pdp-promo-badge-float" id="pdp-promo-badge-float" style="display:none;">PROMO</div>
+          </div>
+          <div class="pdp-thumbnails" id="pdp-thumbnails">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Right: Info & Purchase Controls -->
+        <div class="pdp-info">
+          
+          <div class="pdp-meta-top">
+            <span class="pdp-category-badge" id="pdp-category"></span>
+            <span class="pdp-vendor" id="pdp-vendor"></span>
+          </div>
+
+          <h1 class="pdp-title" id="pdp-title"></h1>
+          
+          <div class="pdp-sku-stock-row">
+            <div class="pdp-stock-status" id="pdp-stock-status">
+              <span class="stock-dot"></span> <span id="pdp-stock-text">En stock</span>
+            </div>
+            <div class="pdp-sku" id="pdp-sku" style="display:none"></div>
+          </div>
+          
+          <!-- Pricing -->
+          <div class="pdp-price-wrap">
+            <div class="pdp-price" id="pdp-price">0 FCFA</div>
+            <div class="pdp-compare-price" id="pdp-compare-price" style="display:none;"></div>
+            <span class="pdp-sale-badge" id="pdp-sale-badge" style="display:none;"></span>
+          </div>
+
+          <!-- Variants Selector (Options: Taille, Couleur, etc.) -->
+          <div class="pdp-variants-container" id="pdp-variants-container" style="display:none;">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <!-- Quantity Selector & Action Buttons -->
+          <div class="pdp-actions-card">
+            
+            <div class="pdp-qty-row">
+              <span class="qty-label">Quantité:</span>
+              <div class="pdp-qty-wrapper">
+                <button type="button" class="pdp-qty-btn" id="pdp-qty-minus" aria-label="Diminuer">−</button>
+                <span class="pdp-qty-val" id="pdp-qty-val">1</span>
+                <button type="button" class="pdp-qty-btn" id="pdp-qty-plus" aria-label="Augmenter">+</button>
+              </div>
+            </div>
+
+            <div class="pdp-buttons-group">
+              <!-- Add to cart -->
+              <button type="button" class="btn btn-secondary pdp-btn-cart" id="pdp-add-btn">
+                <span>🛍️ Ajouter au Panier</span>
+              </button>
+              <!-- Buy Now Direct -->
+              <button type="button" class="btn btn-primary pdp-btn-buynow" id="pdp-buynow-btn">
+                <span>⚡ Acheter Maintenant</span>
+              </button>
+            </div>
+
+            <!-- WhatsApp Direct Order -->
+            <a href="#" target="_blank" rel="noopener" class="pdp-btn-whatsapp" id="pdp-whatsapp-btn">
+              <span>💬 Commander par WhatsApp</span>
+            </a>
+          </div>
+
+          <!-- Description -->
+          <div class="pdp-desc-section">
+            <h3>Description du Produit</h3>
+            <p class="pdp-desc" id="pdp-desc"></p>
+          </div>
+          
+          <!-- Trust Badges -->
+          <div class="pdp-trust">
+            <div class="trust-item">
+              <span class="trust-icon">🚚</span>
+              <div>
+                <strong>Livraison Express 24h/48h</strong>
+                <p>À Dakar et partout dans les régions du Sénégal.</p>
+              </div>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon">💵</span>
+              <div>
+                <strong>Paiement à la Réception</strong>
+                <p>Réglez en espèces ou par Wave / Orange Money après vérification.</p>
+              </div>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon">🔄</span>
+              <div>
+                <strong>Garantie Satisfait ou Échangé</strong>
+                <p>Échange facile sous 7 jours en cas de non-conformité.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ── Related Products Section ──────────────────────── -->
+      <section class="pdp-related-section" id="pdp-related-section" style="display:none;">
+        <div class="section-header">
+          <div>
+            <h2 style="font-size:1.4rem;font-weight:800;margin:0 0 0.25rem 0;">Produits Similaires</h2>
+            <p style="color:var(--text-muted);font-size:0.88rem;margin:0;">Découvrez d'autres articles qui pourraient vous plaire</p>
+          </div>
+        </div>
+        <div class="pdp-related-grid" id="pdp-related-grid">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── Sticky Mobile Purchase Bar ─────────────────────── -->
+    <div class="sticky-buy-bar" id="sticky-buy-bar">
+      <div class="sticky-bar-inner">
+        <img id="sticky-bar-thumb" src="" alt="Thumbnail" class="sticky-thumb">
+        <div class="sticky-info">
+          <div class="sticky-title" id="sticky-title">Produit</div>
+          <div class="sticky-price" id="sticky-price">0 FCFA</div>
+        </div>
+        <button type="button" class="btn btn-primary sticky-btn" id="sticky-buy-btn">
+          <span>Commander</span>
+        </button>
       </div>
     </div>
 
-    <!-- ── Product Detail Layout ─────────────────────────── -->
-    <main class="pdp-container" id="pdp-container">
-      <div class="pdp-loading" id="pdp-loading">Loading product details...</div>
-      
-      <div class="pdp-content" id="pdp-content" style="display: none;">
-        <!-- Left: Image Gallery -->
-        <div class="pdp-gallery">
-          <div class="pdp-main-image-wrap">
-            <img id="pdp-main-image" src="" alt="Product">
-          </div>
-          <div class="pdp-thumbnails" id="pdp-thumbnails">
-            <!-- Rendered by JS -->
-          </div>
-        </div>
-
-        <!-- Right: Info & Actions -->
-        <div class="pdp-info">
-          <div class="pdp-meta-top">
-            <span class="pdp-category" id="pdp-category"></span>
-            <span class="pdp-vendor" id="pdp-vendor"></span>
-          </div>
-          <h1 class="pdp-title" id="pdp-title"></h1>
-          <div class="pdp-sku" id="pdp-sku" style="display:none"></div>
-          
-          <div class="pdp-price-wrap">
-            <div class="pdp-price" id="pdp-price"></div>
-            <div class="pdp-compare-price" id="pdp-compare-price" style="display:none;"></div>
-            <span class="pdp-sale-badge" id="pdp-sale-badge" style="display:none;">SALE</span>
-          </div>
-
-          <!-- Variants Selector (Shopify Options) -->
-          <div class="pdp-variants-container" id="pdp-variants-container" style="display:none;">
-            <!-- Rendered by JS: Size / Color option selectors -->
-          </div>
-
-          <p class="pdp-desc" id="pdp-desc"></p>
-          
-          <div class="pdp-actions">
-            <div class="pdp-qty-wrapper">
-              <button class="pdp-qty-btn" id="pdp-qty-minus">−</button>
-              <span class="pdp-qty-val" id="pdp-qty-val">1</span>
-              <button class="pdp-qty-btn" id="pdp-qty-plus">+</button>
-            </div>
-            <button class="btn btn-primary pdp-add-btn" id="pdp-add-btn">Add to Cart</button>
-          </div>
-          
-          <div class="pdp-trust">
-            <div class="trust-item"><span>🚚</span> Livraison gratuite dès 50 000 FCFA</div>
-            <div class="trust-item"><span>🔄</span> Échange & retour sous 7 jours</div>
-            <div class="trust-item"><span>💵</span> Paiement à la livraison (Cash on Delivery)</div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- ── Cart Sidebar (Same as index) ──────────────────── -->
+    <!-- ── Cart Drawer & Overlay ──────────────────────────── -->
     <div class="overlay" id="overlay"></div>
     <div class="cart-sidebar" id="cart-sidebar">
       <div class="cart-header">
         <h2>Votre Panier <span id="cart-qty-label"></span></h2>
-        <button class="close-cart" id="close-cart" aria-label="Close cart">✕</button>
+        <button class="close-cart" id="close-cart" aria-label="Fermer le panier">✕</button>
       </div>
       <div class="cart-items" id="cart-items"></div>
       <div class="cart-delivery-form">
         <div class="cart-delivery-title">📦 Informations de livraison (Sénégal)</div>
-        <input type="text" id="delivery-name"     placeholder="Nom complet *"       maxlength="60">
-        <input type="tel"  id="delivery-phone"    placeholder="Numéro de téléphone (WhatsApp) *" maxlength="20">
+        <input type="text" id="delivery-name" placeholder="Nom complet *" maxlength="60">
+        <input type="tel" id="delivery-phone" placeholder="Numéro de téléphone (WhatsApp) *" maxlength="20">
         <div class="delivery-location-row">
           <input type="text" id="delivery-location" placeholder="Ville / Quartier / Adresse (ex: Dakar, Almadies) *" maxlength="140">
           <button type="button" class="btn-gps" id="btn-gps" title="Ma position actuelle">
@@ -166,102 +240,32 @@
       </div>
     </div>
 
+    <!-- ── Footer ─────────────────────────────────────────── -->
     <footer class="footer">
+      <div class="footer-inner">
+        <div>
+          <div class="logo" style="color:white;margin-bottom:0.75rem">Adounas<span class="logo-dot">.</span></div>
+          <p style="color:var(--text-light);font-size:0.9rem;line-height:1.6">La boutique de référence pour vos achats au Sénégal. Qualité garantie et livraison express.</p>
+        </div>
+        <div>
+          <h4 style="color:white;margin-bottom:1rem;font-size:0.95rem">Navigation</h4>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:0.5rem;padding:0">
+            <li><a href="/" style="color:var(--text-light);text-decoration:none;font-size:0.88rem">Accueil</a></li>
+            <li><a href="/#products" style="color:var(--text-light);text-decoration:none;font-size:0.88rem">Boutique</a></li>
+            <li><a href="/suivi.html" style="color:var(--accent);text-decoration:none;font-size:0.88rem;font-weight:700">📦 Suivre ma commande</a></li>
+            <li><a href="/admin.html" style="color:var(--text-light);text-decoration:none;font-size:0.88rem">Espace Vendeur</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="color:white;margin-bottom:1rem;font-size:0.95rem">Contact & Support</h4>
+          <p style="color:var(--text-light);font-size:0.88rem;line-height:1.6">Dakar, Sénégal<br>WhatsApp: +221 77 000 00 00<br>Paiement: Cash à la livraison / Wave</p>
+        </div>
+      </div>
       <div class="footer-bottom">
-        <p>&copy; 2026 Adounas. All rights reserved. &nbsp;·&nbsp; <a href="/admin.html" style="color:var(--text-light);text-decoration:none;font-size:0.8rem">Staff Login</a></p>
+        <p>&copy; 2026 Adounas. Tous droits réservés.</p>
       </div>
     </footer>
 
-    <!-- ── In-App Chat Widget ────────────────────────────────── -->
-    <div id="chat-widget" class="chat-widget">
-      <button class="chat-trigger-btn" id="chat-trigger-btn" aria-label="Open chat">
-        <svg id="chat-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-        <svg id="chat-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-        <span class="chat-unread-badge" id="chat-unread-badge" style="display:none">!</span>
-      </button>
-      <div class="chat-window" id="chat-window" style="display:none">
-        <div class="chat-window-header">
-          <div class="chat-header-info">
-            <div class="chat-avatar">S</div>
-            <div>
-              <div class="chat-header-name">Solo Support</div>
-              <div class="chat-header-status">We reply quickly!</div>
-            </div>
-          </div>
-        </div>
-        <div class="chat-name-prompt" id="chat-name-prompt">
-          <p>👋 Hi! What's your name?</p>
-          <div class="chat-name-form">
-            <input type="text" id="chat-name-input" placeholder="Your name..." maxlength="40">
-            <button class="btn btn-primary" id="chat-name-submit">Start Chat</button>
-          </div>
-        </div>
-        <div class="chat-messages" id="chat-messages" style="display:none"></div>
-        <div class="chat-input-row" id="chat-input-row" style="display:none">
-          <input type="text" id="chat-input" placeholder="Type a message..." maxlength="500" autocomplete="off">
-          <button class="chat-send-btn" id="chat-send-btn" aria-label="Send">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Customer Auth Modal ────────────────────────────── -->
-    <div class="auth-overlay" id="auth-overlay">
-      <div class="auth-modal" id="auth-modal">
-        <button class="auth-close" id="auth-close" aria-label="Close modal">✕</button>
-        
-        <div class="auth-header">
-          <div class="logo">Adouna Amoul Solo.</div>
-          <h2 id="auth-modal-title">Welcome to Solo</h2>
-          <p class="auth-modal-sub" id="auth-modal-sub">Sign in or create an account to proceed</p>
-        </div>
-
-        <div class="auth-tabs">
-          <button class="auth-tab active" id="auth-tab-login">Sign In</button>
-          <button class="auth-tab" id="auth-tab-register">Create Account</button>
-        </div>
-
-        <!-- Login Form -->
-        <form class="auth-form" id="auth-form-login">
-          <div class="auth-form-group">
-            <label for="auth-login-email">Email Address</label>
-            <input type="email" id="auth-login-email" placeholder="you@example.com" required autocomplete="email">
-          </div>
-          <div class="auth-form-group">
-            <label for="auth-login-password">Password</label>
-            <input type="password" id="auth-login-password" placeholder="••••••••" required autocomplete="current-password">
-          </div>
-          <div class="auth-error" id="auth-login-error" style="display:none"></div>
-          <button type="submit" class="btn btn-primary auth-submit-btn">Sign In & Continue</button>
-        </form>
-
-        <!-- Register Form -->
-        <form class="auth-form" id="auth-form-register" style="display:none">
-          <div class="auth-form-group">
-            <label for="auth-reg-name">Full Name</label>
-            <input type="text" id="auth-reg-name" placeholder="John Doe" required autocomplete="name">
-          </div>
-          <div class="auth-form-group">
-            <label for="auth-reg-email">Email Address</label>
-            <input type="email" id="auth-reg-email" placeholder="you@example.com" required autocomplete="email">
-          </div>
-          <div class="auth-form-group">
-            <label for="auth-reg-password">Create Password (min 6 chars)</label>
-            <input type="password" id="auth-reg-password" placeholder="••••••••" minlength="6" required autocomplete="new-password">
-          </div>
-          <div class="auth-error" id="auth-reg-error" style="display:none"></div>
-          <button type="submit" class="btn btn-primary auth-submit-btn">Create Account & Continue</button>
-        </form>
-      </div>
-    </div>
-
-    <script type="module" src="/src/main.js"></script>
     <script type="module" src="/src/product.js"></script>
     <script type="module" src="/src/chat.js"></script>
   </body>

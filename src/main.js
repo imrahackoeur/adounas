@@ -8,44 +8,159 @@ export function formatFCFA(amount) {
   return `${num.toLocaleString('fr-FR')} FCFA`;
 }
 
-// ── Seed Products (FCFA) ──────────────────────────────────────────────────────
+// ── Color Swatch Dictionary & Helper ──────────────────────────────────────────
+const COLOR_MAP = {
+  'noir': '#111827',
+  'black': '#111827',
+  'noir mat': '#1F2937',
+  'noir furtif': '#0F172A',
+  'blanc': '#FFFFFF',
+  'white': '#FFFFFF',
+  'blanc pur': '#FFFFFF',
+  'gris': '#6B7280',
+  'grey': '#6B7280',
+  'anthracite': '#374151',
+  'argent': '#CBD5E1',
+  'argent pur': '#E2E8F0',
+  'silver': '#E2E8F0',
+  'marron': '#78350F',
+  'brown': '#78350F',
+  'marron cuir': '#854D0E',
+  'cognac': '#9A3412',
+  'cuir': '#92400E',
+  'cuir véritable': '#78350F',
+  'caramel': '#B45309',
+  'beige': '#F5F5DC',
+  'taupe': '#8B8589',
+  'camel': '#C19A6B',
+  'bleu': '#1E40AF',
+  'blue': '#1E40AF',
+  'bleu nuit': '#0F172A',
+  'navy': '#1E3A8A',
+  'bleu marine': '#172554',
+  'bleu ciel': '#60A5FA',
+  'or': '#F59E0B',
+  'gold': '#F59E0B',
+  'or royal': '#D97706',
+  'rose gold': '#E0A899',
+  'bronze': '#CD7F32',
+  'vert': '#15803D',
+  'green': '#15803D',
+  'vert olive': '#556B2F',
+  'rouge': '#DC2626',
+  'red': '#DC2626',
+  'bordeaux': '#881337',
+  'acier inox': '#94A3B8',
+  'acier': '#64748B'
+};
+
+function detectColorHex(colorName) {
+  if (!colorName) return '#374151';
+  const clean = colorName.trim().toLowerCase();
+  if (COLOR_MAP[clean]) return COLOR_MAP[clean];
+  for (const [key, hex] of Object.entries(COLOR_MAP)) {
+    if (clean.includes(key)) return hex;
+  }
+  return '#4F46E5';
+}
+
+// ── Seed Products (FCFA) with Color & Option Variants ─────────────────────────
 const SEED_PRODUCTS = [
-  { id: 1, name: 'Solo Obsidian Backpack', price: 35000, comparePrice: 45000, category: 'Bags',
+  {
+    id: 1,
+    name: 'Solo Obsidian Backpack',
+    price: 35000,
+    comparePrice: 45000,
+    category: 'Bags',
     desc: 'Sac à dos en cuir mat haut de gamme conçu pour les minimalistes. Résistant aux intempéries et idéal pour un usage quotidien.',
-    image: '/bag.png', stock: 25, status: 'active', vendor: 'Solo Dakar' },
-  { id: 2, name: 'Solo Chronos Watch', price: 55000, comparePrice: 65000, category: 'Accessories',
+    image: '/bag.png',
+    images: ['/bag.png'],
+    stock: 25,
+    status: 'active',
+    vendor: 'Solo Dakar',
+    sku: 'SLO-BP-001',
+    hasVariants: true,
+    options: [
+      { name: 'Couleur', values: ['Noir Mat', 'Marron Cuir', 'Bleu Nuit'] },
+      { name: 'Capacité', values: ['20 Litres', '25 Litres'] }
+    ],
+    variants: [
+      { title: 'Noir Mat / 20 Litres', price: 35000, stock: 12, sku: 'SLO-BP-BLK-20', image: '/bag.png' },
+      { title: 'Noir Mat / 25 Litres', price: 39000, stock: 8, sku: 'SLO-BP-BLK-25', image: '/bag.png' },
+      { title: 'Marron Cuir / 20 Litres', price: 37000, stock: 7, sku: 'SLO-BP-BRN-20', image: '/bag.png' },
+      { title: 'Marron Cuir / 25 Litres', price: 42000, stock: 5, sku: 'SLO-BP-BRN-25', image: '/bag.png' },
+      { title: 'Bleu Nuit / 20 Litres', price: 35000, stock: 6, sku: 'SLO-BP-BLU-20', image: '/bag.png' },
+      { title: 'Bleu Nuit / 25 Litres', price: 39000, stock: 4, sku: 'SLO-BP-BLU-25', image: '/bag.png' }
+    ]
+  },
+  {
+    id: 2,
+    name: 'Solo Chronos Watch',
+    price: 55000,
+    comparePrice: 65000,
+    category: 'Accessories',
     desc: 'L’esthétique sombre rencontre l’ingénierie de précision. Une montre minimaliste avec une finition noir furtif.',
-    image: '/watch.png', stock: 15, status: 'active', vendor: 'Solo Dakar' }
+    image: '/watch.png',
+    images: ['/watch.png'],
+    stock: 15,
+    status: 'active',
+    vendor: 'Solo Dakar',
+    sku: 'SLO-WT-002',
+    hasVariants: true,
+    options: [
+      { name: 'Couleur', values: ['Noir Furtif', 'Argent Pur', 'Or Royal'] },
+      { name: 'Bracelet', values: ['Cuir Véritable', 'Acier Inox'] }
+    ],
+    variants: [
+      { title: 'Noir Furtif / Cuir Véritable', price: 55000, stock: 8, sku: 'SLO-WT-BLK-LTR', image: '/watch.png' },
+      { title: 'Noir Furtif / Acier Inox', price: 60000, stock: 4, sku: 'SLO-WT-BLK-STL', image: '/watch.png' },
+      { title: 'Argent Pur / Cuir Véritable', price: 55000, stock: 6, sku: 'SLO-WT-SLV-LTR', image: '/watch.png' },
+      { title: 'Argent Pur / Acier Inox', price: 60000, stock: 5, sku: 'SLO-WT-SLV-STL', image: '/watch.png' },
+      { title: 'Or Royal / Cuir Véritable', price: 65000, stock: 4, sku: 'SLO-WT-GLD-LTR', image: '/watch.png' },
+      { title: 'Or Royal / Acier Inox', price: 70000, stock: 3, sku: 'SLO-WT-GLD-STL', image: '/watch.png' }
+    ]
+  }
 ];
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 function loadProducts() {
   const s = localStorage.getItem('solo_products');
   if (s) {
-    let prods = JSON.parse(s);
-    // Convert old USD seed prices (< 1000) to FCFA
-    let migrated = false;
-    prods = prods.map(p => {
-      if (p.price && p.price < 1000) {
-        migrated = true;
-        return {
-          ...p,
-          price: Math.round(p.price * 600),
-          comparePrice: p.comparePrice ? Math.round(p.comparePrice * 600) : null
-        };
-      }
-      return p;
-    });
-    if (migrated) localStorage.setItem('solo_products', JSON.stringify(prods));
-    return prods;
+    try {
+      let prods = JSON.parse(s);
+      let migrated = false;
+      prods = prods.map(p => {
+        if (p.price && p.price < 1000) {
+          migrated = true;
+          p.price = Math.round(p.price * 600);
+          p.comparePrice = p.comparePrice ? Math.round(p.comparePrice * 600) : null;
+        }
+        if ((p.id === 1 || p.id === 2) && (!p.options || p.options.length === 0)) {
+          const seed = SEED_PRODUCTS.find(sp => sp.id === p.id);
+          if (seed) {
+            p.options = seed.options;
+            p.variants = seed.variants;
+            p.hasVariants = seed.hasVariants;
+            migrated = true;
+          }
+        }
+        return p;
+      });
+      if (migrated) localStorage.setItem('solo_products', JSON.stringify(prods));
+      if (prods.length > 0) return prods;
+    } catch {}
   }
   localStorage.setItem('solo_products', JSON.stringify(SEED_PRODUCTS));
   return SEED_PRODUCTS;
 }
 
-// cart = [{id, qty}]
+// cart = [{id, variantKey, variantTitle, price, name, image, qty}]
 function loadCart() {
-  return JSON.parse(localStorage.getItem('solo_cart') || '[]');
+  try {
+    return JSON.parse(localStorage.getItem('solo_cart') || '[]');
+  } catch {
+    return [];
+  }
 }
 function saveCart(c) {
   localStorage.setItem('solo_cart', JSON.stringify(c));
@@ -56,6 +171,7 @@ let cart     = loadCart();
 let activeCategory = 'all';
 let qvQty = 1;
 let qvProductId = null;
+let qvSelectedVariant = null;
 
 // ── DOM ───────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -81,6 +197,7 @@ const qvQtyMinus       = $('qv-qty-minus');
 const qvQtyPlus        = $('qv-qty-plus');
 const qvQtyVal         = $('qv-qty-val');
 const qvAddBtn         = $('qv-add-btn');
+const qvVariants       = $('qv-variants');
 const checkoutBtn      = $('checkout-btn');
 
 // ── Categories ────────────────────────────────────────────────────────────────
@@ -156,8 +273,14 @@ function renderProducts() {
   productGrid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
-      addToCart(parseInt(btn.dataset.id), 1);
-      animateBtn(btn);
+      const pId = parseInt(btn.dataset.id);
+      const p = products.find(prod => prod.id === pId);
+      if (p && p.hasVariants && p.variants && p.variants.length > 0) {
+        openQuickView(pId);
+      } else {
+        addToCart(pId, 1);
+        animateBtn(btn);
+      }
     });
   });
 
@@ -186,18 +309,24 @@ function animateBtn(btn) {
 }
 
 // ── Cart Logic ────────────────────────────────────────────────────────────────
-function addToCart(productId, qty = 1) {
+function addToCart(productId, qty = 1, variant = null) {
   const p = products.find(p => p.id === productId);
   if (!p) return;
 
-  const existing = cart.find(c => c.id === productId);
+  const itemKey = variant ? `${p.id}_${variant.title}` : p.id;
+  const existing = cart.find(c => (c.variantKey ? c.variantKey === itemKey : c.id === p.id && !c.variantKey));
   const currentQty = existing ? existing.qty : 0;
   
+  const effectiveStock = (variant && variant.stock !== undefined) ? variant.stock : (p.stock !== undefined ? p.stock : 20);
+  const effectivePrice = (variant && variant.price !== undefined) ? variant.price : p.price;
+  const effectiveName  = variant ? `${p.name} (${variant.title})` : p.name;
+  const effectiveImg   = (variant && variant.image) || (p.images && p.images[0]) || p.image || '';
+
   // Check stock limit
-  if (p.stock !== undefined && p.stock !== null) {
-    if (currentQty + qty > p.stock) {
-      alert(`Désolé, seulement ${p.stock} unités disponibles en stock.`);
-      qty = p.stock - currentQty;
+  if (effectiveStock !== undefined && effectiveStock !== null) {
+    if (currentQty + qty > effectiveStock) {
+      alert(`Désolé, seulement ${effectiveStock} unités disponibles en stock.`);
+      qty = effectiveStock - currentQty;
       if (qty <= 0) return;
     }
   }
@@ -205,66 +334,62 @@ function addToCart(productId, qty = 1) {
   if (existing) {
     existing.qty += qty;
   } else {
-    cart.push({ id: productId, price: p.price, name: p.name, image: p.image, qty });
+    cart.push({
+      id: productId,
+      variantKey: itemKey,
+      variantTitle: variant ? variant.title : null,
+      price: effectivePrice,
+      name: effectiveName,
+      image: effectiveImg,
+      qty
+    });
   }
   saveCart(cart);
   updateCartUI();
   openCart();
 }
 
-function setCartQty(productId, qty) {
-  const p = products.find(p => p.id === productId);
-  if (!p) return;
-
-  if (p.stock !== undefined && p.stock !== null && qty > p.stock) {
-    alert(`Désolé, seulement ${p.stock} unités disponibles en stock.`);
-    qty = p.stock;
-  }
-
-  if (qty <= 0) {
-    cart = cart.filter(c => c.id !== productId);
-  } else {
-    const item = cart.find(c => c.id === productId);
-    if (item) item.qty = qty;
-  }
-  saveCart(cart);
-  updateCartUI();
-}
-
 function updateCartUI() {
-  const totalQty = cart.reduce((s, c) => s + c.qty, 0);
+  const totalQty = cart.reduce((s, c) => s + (c.qty || 1), 0);
 
   // Count badge
-  cartCountEl.textContent = totalQty;
-  cartCountEl.classList.toggle('visible', totalQty > 0);
-  cartQtyLabel.textContent = totalQty > 0 ? `(${totalQty})` : '';
+  if (cartCountEl) {
+    cartCountEl.textContent = totalQty;
+    cartCountEl.classList.toggle('visible', totalQty > 0);
+  }
+  if (cartQtyLabel) {
+    cartQtyLabel.textContent = totalQty > 0 ? `(${totalQty})` : '';
+  }
 
   // Items list
+  if (!cartItemsEl) return;
   if (cart.length === 0) {
     cartItemsEl.innerHTML = `<div class="empty-cart">
       <div class="empty-icon">🛒</div>
       <p>Votre panier est vide.</p>
     </div>`;
   } else {
-    cartItemsEl.innerHTML = cart.map(c => {
+    cartItemsEl.innerHTML = cart.map((c, idx) => {
       const p = products.find(p => p.id === c.id);
       const itemName = c.name || (p ? p.name : 'Produit');
       const itemPrice = c.price || (p ? p.price : 0);
       const itemImg = c.image || (p ? p.image : '');
+      const variantTag = c.variantTitle ? `<span class="cart-variant-tag">${c.variantTitle}</span>` : '';
 
       return `<div class="cart-item">
         <img src="${itemImg}" alt="${itemName}"
              onerror="this.src='https://placehold.co/72x72/F0EFFF/4F46E5?text=?'">
         <div class="cart-item-info">
           <div class="cart-item-name">${itemName}</div>
-          <div class="cart-item-price">${formatFCFA(Number(itemPrice) * c.qty)}</div>
+          ${variantTag}
+          <div class="cart-item-price">${formatFCFA(Number(itemPrice) * (c.qty || 1))}</div>
           <div class="cart-qty-stepper">
-            <button class="stepper-btn" data-action="dec" data-id="${c.id}">−</button>
-            <span class="stepper-qty">${c.qty}</span>
-            <button class="stepper-btn" data-action="inc" data-id="${c.id}">+</button>
+            <button class="stepper-btn" data-action="dec" data-idx="${idx}">−</button>
+            <span class="stepper-qty">${c.qty || 1}</span>
+            <button class="stepper-btn" data-action="inc" data-idx="${idx}">+</button>
           </div>
         </div>
-        <button class="cart-item-remove" data-id="${c.id}" aria-label="Supprimer ${itemName}">
+        <button class="cart-item-remove" data-idx="${idx}" aria-label="Supprimer ${itemName}">
           <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
         </button>
       </div>`;
@@ -273,16 +398,29 @@ function updateCartUI() {
     // Stepper listeners
     cartItemsEl.querySelectorAll('.stepper-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const id = parseInt(btn.dataset.id);
-        const item = cart.find(c => c.id === id);
-        if (!item) return;
-        setCartQty(id, item.qty + (btn.dataset.action === 'inc' ? 1 : -1));
+        const idx = parseInt(btn.dataset.idx);
+        if (!cart[idx]) return;
+        const newQty = (cart[idx].qty || 1) + (btn.dataset.action === 'inc' ? 1 : -1);
+        if (newQty <= 0) {
+          cart.splice(idx, 1);
+        } else {
+          cart[idx].qty = newQty;
+        }
+        saveCart(cart);
+        updateCartUI();
       });
     });
 
     // Remove listeners
     cartItemsEl.querySelectorAll('.cart-item-remove').forEach(btn => {
-      btn.addEventListener('click', () => setCartQty(parseInt(btn.dataset.id), 0));
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx);
+        if (cart[idx]) {
+          cart.splice(idx, 1);
+          saveCart(cart);
+          updateCartUI();
+        }
+      });
     });
   }
 
@@ -290,9 +428,9 @@ function updateCartUI() {
   const total = cart.reduce((s, c) => {
     const p = products.find(p => p.id === c.id);
     const itemPrice = c.price || (p ? p.price : 0);
-    return s + (Number(itemPrice) * c.qty);
+    return s + (Number(itemPrice) * (c.qty || 1));
   }, 0);
-  cartTotalPriceEl.textContent = formatFCFA(total);
+  if (cartTotalPriceEl) cartTotalPriceEl.textContent = formatFCFA(total);
 }
 
 // ── Quick-View ────────────────────────────────────────────────────────────────
@@ -301,12 +439,89 @@ function openQuickView(id) {
   if (!p) return;
   qvProductId = id;
   qvQty = 1;
+  qvSelectedVariant = null;
+
   $('qv-qty-val').textContent = 1;
   $('qv-image').src = (p.images && p.images[0]) || p.image || '';
   $('qv-name').textContent = p.name;
   $('qv-desc').textContent = p.desc || '';
   $('qv-price').textContent = formatFCFA(p.price);
   $('qv-category').textContent = p.category || '';
+
+  // Render Variants & Color Swatches if available
+  if (qvVariants) {
+    if (p.hasVariants && p.options && p.options.length > 0 && p.variants && p.variants.length > 0) {
+      qvVariants.style.display = 'flex';
+      const selectedOpts = {};
+      p.options.forEach(opt => {
+        selectedOpts[opt.name] = (opt.values && opt.values[0]) || '';
+      });
+
+      function updateQVVariant() {
+        const combo = Object.values(selectedOpts).join(' / ');
+        const match = p.variants.find(v => v.title === combo) || p.variants[0];
+        if (match) {
+          qvSelectedVariant = match;
+          const pr = match.price !== undefined ? match.price : p.price;
+          $('qv-price').textContent = formatFCFA(pr);
+          if (match.image) $('qv-image').src = match.image;
+        }
+      }
+
+      qvVariants.innerHTML = p.options.map(opt => {
+        const isColor = /(couleur|color|teinte|coloris)/i.test(opt.name);
+        if (isColor) {
+          return `
+            <div class="pdp-option-group" data-option="${opt.name}">
+              <div class="pdp-option-header">${opt.name}: <span class="pdp-option-selected-val" style="font-weight:700;color:var(--accent);">${selectedOpts[opt.name]}</span></div>
+              <div class="pdp-color-swatches-grid">
+                ${(opt.values || []).map((val, idx) => `
+                  <button type="button" class="pdp-color-swatch-pill ${idx === 0 ? 'active' : ''}" data-option="${opt.name}" data-val="${val}">
+                    <span class="swatch-color-dot" style="background-color: ${detectColorHex(val)};"></span>
+                    <span class="swatch-name">${val}</span>
+                    <span class="swatch-check">✓</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div class="pdp-option-group" data-option="${opt.name}">
+            <div class="pdp-option-header">${opt.name}: <span class="pdp-option-selected-val" style="font-weight:700;color:var(--accent);">${selectedOpts[opt.name]}</span></div>
+            <div class="pdp-option-pills">
+              ${(opt.values || []).map((val, idx) => `
+                <button type="button" class="pdp-option-pill ${idx === 0 ? 'active' : ''}" data-option="${opt.name}" data-val="${val}">
+                  ${val}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      qvVariants.querySelectorAll('.pdp-option-pill, .pdp-color-swatch-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const optName = btn.dataset.option;
+          const optVal = btn.dataset.val;
+          selectedOpts[optName] = optVal;
+
+          const group = btn.closest('.pdp-option-group');
+          group.querySelectorAll('.pdp-option-pill, .pdp-color-swatch-pill').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          group.querySelector('.pdp-option-selected-val').textContent = optVal;
+
+          updateQVVariant();
+        });
+      });
+
+      updateQVVariant();
+    } else {
+      qvVariants.style.display = 'none';
+      qvVariants.innerHTML = '';
+    }
+  }
+
   qvOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -321,7 +536,7 @@ qvQtyMinus.addEventListener('click', () => { if (qvQty > 1) { qvQty--; qvQtyVal.
 qvQtyPlus.addEventListener('click',  () => { qvQty++; qvQtyVal.textContent = qvQty; });
 qvAddBtn.addEventListener('click', () => {
   if (qvProductId) {
-    addToCart(qvProductId, qvQty);
+    addToCart(qvProductId, qvQty, qvSelectedVariant);
     closeQuickView();
   }
 });
@@ -340,10 +555,17 @@ async function executeOrder(user) {
   const items = cart.map(c => {
     const p = products.find(p => p.id === c.id);
     if (!p) return null;
-    return { id: p.id, name: p.name, price: p.price, qty: c.qty, image: p.image || '' };
+    return {
+      id: p.id,
+      name: c.name || p.name,
+      variantTitle: c.variantTitle || null,
+      price: c.price || p.price,
+      qty: c.qty || 1,
+      image: c.image || p.image || ''
+    };
   }).filter(Boolean);
 
-  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
 
   const origText = checkoutBtn.textContent;
   checkoutBtn.disabled = true;

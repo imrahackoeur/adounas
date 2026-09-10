@@ -8,7 +8,63 @@ function formatFCFA(amount) {
   return `${num.toLocaleString('fr-FR')} FCFA`;
 }
 
-// ── Fallback Seed Products ───────────────────────────────────────────────────
+// ── Color Swatch Dictionary & Helper ──────────────────────────────────────────
+const COLOR_MAP = {
+  'noir': '#111827',
+  'black': '#111827',
+  'noir mat': '#1F2937',
+  'noir furtif': '#0F172A',
+  'blanc': '#FFFFFF',
+  'white': '#FFFFFF',
+  'blanc pur': '#FFFFFF',
+  'gris': '#6B7280',
+  'grey': '#6B7280',
+  'anthracite': '#374151',
+  'argent': '#CBD5E1',
+  'argent pur': '#E2E8F0',
+  'silver': '#E2E8F0',
+  'marron': '#78350F',
+  'brown': '#78350F',
+  'marron cuir': '#854D0E',
+  'cognac': '#9A3412',
+  'cuir': '#92400E',
+  'cuir véritable': '#78350F',
+  'caramel': '#B45309',
+  'beige': '#F5F5DC',
+  'taupe': '#8B8589',
+  'camel': '#C19A6B',
+  'bleu': '#1E40AF',
+  'blue': '#1E40AF',
+  'bleu nuit': '#0F172A',
+  'navy': '#1E3A8A',
+  'bleu marine': '#172554',
+  'bleu ciel': '#60A5FA',
+  'or': '#F59E0B',
+  'gold': '#F59E0B',
+  'or royal': '#D97706',
+  'rose gold': '#E0A899',
+  'bronze': '#CD7F32',
+  'vert': '#15803D',
+  'green': '#15803D',
+  'vert olive': '#556B2F',
+  'rouge': '#DC2626',
+  'red': '#DC2626',
+  'bordeaux': '#881337',
+  'acier inox': '#94A3B8',
+  'acier': '#64748B'
+};
+
+function detectColorHex(colorName) {
+  if (!colorName) return '#374151';
+  const clean = colorName.trim().toLowerCase();
+  if (COLOR_MAP[clean]) return COLOR_MAP[clean];
+  for (const [key, hex] of Object.entries(COLOR_MAP)) {
+    if (clean.includes(key)) return hex;
+  }
+  return '#4F46E5';
+}
+
+// ── Fallback Seed Products with Multi-Color Variants ──────────────────────────
 const SEED_PRODUCTS = [
   {
     id: 1,
@@ -22,7 +78,20 @@ const SEED_PRODUCTS = [
     stock: 25,
     status: 'active',
     vendor: 'Solo Dakar',
-    sku: 'SLO-BP-001'
+    sku: 'SLO-BP-001',
+    hasVariants: true,
+    options: [
+      { name: 'Couleur', values: ['Noir Mat', 'Marron Cuir', 'Bleu Nuit'] },
+      { name: 'Capacité', values: ['20 Litres', '25 Litres'] }
+    ],
+    variants: [
+      { title: 'Noir Mat / 20 Litres', price: 35000, stock: 12, sku: 'SLO-BP-BLK-20', image: '/bag.png' },
+      { title: 'Noir Mat / 25 Litres', price: 39000, stock: 8, sku: 'SLO-BP-BLK-25', image: '/bag.png' },
+      { title: 'Marron Cuir / 20 Litres', price: 37000, stock: 7, sku: 'SLO-BP-BRN-20', image: '/bag.png' },
+      { title: 'Marron Cuir / 25 Litres', price: 42000, stock: 5, sku: 'SLO-BP-BRN-25', image: '/bag.png' },
+      { title: 'Bleu Nuit / 20 Litres', price: 35000, stock: 6, sku: 'SLO-BP-BLU-20', image: '/bag.png' },
+      { title: 'Bleu Nuit / 25 Litres', price: 39000, stock: 4, sku: 'SLO-BP-BLU-25', image: '/bag.png' }
+    ]
   },
   {
     id: 2,
@@ -30,13 +99,26 @@ const SEED_PRODUCTS = [
     price: 55000,
     comparePrice: 65000,
     category: 'Accessories',
-    desc: 'L’esthétique sombre rencontre l’ingénierie de précision. Une montre minimaliste avec une finition noir furtif.',
+    desc: 'L’esthétique sombre rencontre l’ingénierie de précision. Une montre minimaliste avec finition de prestige.',
     image: '/watch.png',
     images: ['/watch.png'],
     stock: 15,
     status: 'active',
     vendor: 'Solo Dakar',
-    sku: 'SLO-WT-002'
+    sku: 'SLO-WT-002',
+    hasVariants: true,
+    options: [
+      { name: 'Couleur', values: ['Noir Furtif', 'Argent Pur', 'Or Royal'] },
+      { name: 'Bracelet', values: ['Cuir Véritable', 'Acier Inox'] }
+    ],
+    variants: [
+      { title: 'Noir Furtif / Cuir Véritable', price: 55000, stock: 8, sku: 'SLO-WT-BLK-LTR', image: '/watch.png' },
+      { title: 'Noir Furtif / Acier Inox', price: 60000, stock: 4, sku: 'SLO-WT-BLK-STL', image: '/watch.png' },
+      { title: 'Argent Pur / Cuir Véritable', price: 55000, stock: 6, sku: 'SLO-WT-SLV-LTR', image: '/watch.png' },
+      { title: 'Argent Pur / Acier Inox', price: 60000, stock: 5, sku: 'SLO-WT-SLV-STL', image: '/watch.png' },
+      { title: 'Or Royal / Cuir Véritable', price: 65000, stock: 4, sku: 'SLO-WT-GLD-LTR', image: '/watch.png' },
+      { title: 'Or Royal / Acier Inox', price: 70000, stock: 3, sku: 'SLO-WT-GLD-STL', image: '/watch.png' }
+    ]
   }
 ];
 
@@ -49,11 +131,17 @@ function loadProducts() {
       prods = prods.map(p => {
         if (p.price && p.price < 1000) {
           migrated = true;
-          return {
-            ...p,
-            price: Math.round(p.price * 600),
-            comparePrice: p.comparePrice ? Math.round(p.comparePrice * 600) : null
-          };
+          p.price = Math.round(p.price * 600);
+          p.comparePrice = p.comparePrice ? Math.round(p.comparePrice * 600) : null;
+        }
+        if ((p.id === 1 || p.id === 2) && (!p.options || p.options.length === 0)) {
+          const seed = SEED_PRODUCTS.find(sp => sp.id === p.id);
+          if (seed) {
+            p.options = seed.options;
+            p.variants = seed.variants;
+            p.hasVariants = seed.hasVariants;
+            migrated = true;
+          }
         }
         return p;
       });
@@ -178,7 +266,20 @@ if (!product) {
   const descEl = document.getElementById('pdp-desc');
   if (descEl) descEl.textContent = product.desc || 'Produit de qualité supérieure certifié Adounas.';
 
-  // Variants Selector (Options: Taille, Couleur, Modèle)
+  // Gallery
+  const mainImage = document.getElementById('pdp-main-image');
+  const rawImages = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
+  const images = rawImages.length > 0 ? rawImages : ['https://placehold.co/600x600/F0EFFF/4F46E5?text=Adounas'];
+
+  if (mainImage) mainImage.src = images[0];
+
+  // Update sticky thumbnail
+  const stickyThumb = document.getElementById('sticky-bar-thumb');
+  const stickyTitle = document.getElementById('sticky-title');
+  if (stickyThumb) stickyThumb.src = images[0];
+  if (stickyTitle) stickyTitle.textContent = product.name;
+
+  // Variants Selector (Options: Couleur, Taille, Capacité, Bracelet)
   const variantsContainer = document.getElementById('pdp-variants-container');
   if (product.hasVariants && product.options && product.options.length > 0 && product.variants && product.variants.length > 0) {
     variantsContainer.style.display = 'flex';
@@ -201,32 +302,62 @@ if (!product) {
           skuEl.textContent = `SKU: ${match.sku}`;
           skuEl.style.display = 'block';
         }
+        if (match.image && mainImage) {
+          mainImage.src = match.image;
+          if (stickyThumb) stickyThumb.src = match.image;
+        }
       }
       updateWhatsAppLink();
     }
 
-    variantsContainer.innerHTML = product.options.map(opt => `
-      <div class="pdp-option-group" data-option="${opt.name}">
-        <div class="pdp-option-header">${opt.name}: <span class="pdp-option-selected-val" style="font-weight:700;color:var(--accent);">${selectedOptions[opt.name]}</span></div>
-        <div class="pdp-option-pills">
-          ${(opt.values || []).map((val, idx) => `
-            <button type="button" class="pdp-option-pill ${idx === 0 ? 'active' : ''}" data-option="${opt.name}" data-val="${val}">
-              ${val}
-            </button>
-          `).join('')}
-        </div>
-      </div>
-    `).join('');
+    variantsContainer.innerHTML = product.options.map(opt => {
+      const isColor = /(couleur|color|teinte|coloris)/i.test(opt.name);
+      
+      if (isColor) {
+        return `
+          <div class="pdp-option-group" data-option="${opt.name}">
+            <div class="pdp-option-header">${opt.name}: <span class="pdp-option-selected-val" style="font-weight:700;color:var(--accent);">${selectedOptions[opt.name]}</span></div>
+            <div class="pdp-color-swatches-grid">
+              ${(opt.values || []).map((val, idx) => {
+                const hex = detectColorHex(val);
+                const isSelected = idx === 0;
+                return `
+                  <button type="button" class="pdp-color-swatch-pill ${isSelected ? 'active' : ''}" data-option="${opt.name}" data-val="${val}" aria-label="Couleur ${val}">
+                    <span class="swatch-color-dot" style="background-color: ${hex};"></span>
+                    <span class="swatch-name">${val}</span>
+                    <span class="swatch-check">✓</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
 
-    variantsContainer.querySelectorAll('.pdp-option-pill').forEach(pill => {
-      pill.addEventListener('click', () => {
-        const optName = pill.dataset.option;
-        const optVal = pill.dataset.val;
+      return `
+        <div class="pdp-option-group" data-option="${opt.name}">
+          <div class="pdp-option-header">${opt.name}: <span class="pdp-option-selected-val" style="font-weight:700;color:var(--accent);">${selectedOptions[opt.name]}</span></div>
+          <div class="pdp-option-pills">
+            ${(opt.values || []).map((val, idx) => `
+              <button type="button" class="pdp-option-pill ${idx === 0 ? 'active' : ''}" data-option="${opt.name}" data-val="${val}">
+                ${val}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach click listeners for both standard pills and color swatches
+    variantsContainer.querySelectorAll('.pdp-option-pill, .pdp-color-swatch-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const optName = btn.dataset.option;
+        const optVal = btn.dataset.val;
         selectedOptions[optName] = optVal;
 
-        const group = pill.closest('.pdp-option-group');
-        group.querySelectorAll('.pdp-option-pill').forEach(p => p.classList.remove('active'));
-        pill.classList.add('active');
+        const group = btn.closest('.pdp-option-group');
+        group.querySelectorAll('.pdp-option-pill, .pdp-color-swatch-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
         group.querySelector('.pdp-option-selected-val').textContent = optVal;
 
         matchVariant();
@@ -235,19 +366,6 @@ if (!product) {
 
     matchVariant();
   }
-
-  // Gallery
-  const mainImage = document.getElementById('pdp-main-image');
-  const rawImages = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
-  const images = rawImages.length > 0 ? rawImages : ['https://placehold.co/600x600/F0EFFF/4F46E5?text=Adounas'];
-
-  if (mainImage) mainImage.src = images[0];
-
-  // Update sticky thumbnail
-  const stickyThumb = document.getElementById('sticky-bar-thumb');
-  const stickyTitle = document.getElementById('sticky-title');
-  if (stickyThumb) stickyThumb.src = images[0];
-  if (stickyTitle) stickyTitle.textContent = product.name;
 
   const thumbsEl = document.getElementById('pdp-thumbnails');
   if (images.length > 1 && thumbsEl) {
@@ -504,11 +622,13 @@ function updatePDPcartUI() {
   cartItemsEl.innerHTML = cart.map((item, index) => {
     const itemTotal = Number(item.price || 0) * (item.qty || 1);
     totalAmount += itemTotal;
+    const variantBadge = item.variantTitle ? `<span class="cart-variant-tag">${item.variantTitle}</span>` : '';
     return `
       <div class="cart-item">
         <img src="${item.image || 'https://placehold.co/100x100'}" alt="${item.name || 'Produit'}">
         <div class="cart-item-info">
           <div class="cart-item-name">${item.name || 'Produit'}</div>
+          ${variantBadge}
           <div class="cart-item-price">${formatFCFA(item.price || 0)}</div>
           <div class="cart-qty-stepper">
             <button type="button" class="stepper-btn pdp-cart-dec" data-idx="${index}">−</button>

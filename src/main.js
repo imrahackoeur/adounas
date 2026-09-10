@@ -394,32 +394,23 @@ checkoutBtn.addEventListener('click', async () => {
   const custName = nameInput  ? nameInput.value.trim()   : '';
 
   if (!custName) {
-    showCartToast('⚠️ Please enter your name.');
+    showCartToast('⚠️ Veuillez entrer votre nom complet.');
     if (nameInput) nameInput.focus();
     return;
   }
   if (!phone) {
-    showCartToast('⚠️ Please enter your phone number.');
+    showCartToast('⚠️ Veuillez entrer votre numéro de téléphone (WhatsApp).');
     if (phoneInput) phoneInput.focus();
     return;
   }
   if (!location) {
-    showCartToast('⚠️ Please enter your delivery location.');
+    showCartToast('⚠️ Veuillez entrer votre adresse de livraison.');
     if (locInput) locInput.focus();
     return;
   }
 
-  // Check if customer is authenticated
+  // Allow guest checkout directly (attach user session if logged in)
   const user = getCurrentUser();
-  if (!user) {
-    showCartToast('🔒 Please sign in or create an account to complete your order.');
-    openAuthModal(() => {
-      const updatedUser = getCurrentUser();
-      executeOrder(updatedUser);
-    }, 'register');
-    return;
-  }
-
   await executeOrder(user);
 });
 
@@ -439,6 +430,11 @@ function showCartToast(msg) {
 
 // ── Cart UI Toggles ───────────────────────────────────────────────────────────
 function openCart() {
+  const user = getCurrentUser();
+  const nameInput = document.getElementById('delivery-name');
+  if (user && user.name && nameInput && !nameInput.value) {
+    nameInput.value = user.name;
+  }
   cartSidebar.classList.add('open');
   overlay.classList.add('visible');
 }

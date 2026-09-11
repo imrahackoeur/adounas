@@ -150,7 +150,12 @@ function formatFCFA(amount) {
 function loadProducts() {
   const s = localStorage.getItem('solo_products');
   if (!s) return [];
-  let prods = JSON.parse(s);
+  let prods = [];
+  try {
+    prods = JSON.parse(s);
+  } catch {
+    return [];
+  }
   // Migrate any old USD values (< 1000) to FCFA
   let migrated = false;
   prods = prods.map(p => {
@@ -172,6 +177,45 @@ function saveProducts(p) {
 }
 
 let products = loadProducts();
+
+async function fetchProductsFromServer() {
+  try {
+    const res = await fetch('/api/products');
+    if (res.ok) {
+      const data = await res.json();
+      const serverProds = data.products || (Array.isArray(data) ? data : []);
+      if (serverProds.length > 0) {
+        const localProds = loadProducts();
+        const serverIds = new Set(serverProds.map(p => p.id));
+        const extraLocal = localProds.filter(lp => !serverIds.has(lp.id));
+
+        if (extraLocal.length > 0 && getAdminToken()) {
+          const merged = [...serverProds, ...extraLocal];
+          try {
+            await adminFetch('/api/products', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ products: merged })
+            });
+            products = merged;
+            saveProducts(merged);
+            renderProductsTable();
+            if (tabDashboard && tabDashboard.classList.contains('active')) loadDashboard();
+            return;
+          } catch {}
+        }
+
+        products = serverProds;
+        saveProducts(serverProds);
+        renderProductsTable();
+        if (tabDashboard && tabDashboard.classList.contains('active')) loadDashboard();
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch products from server, using local cache:', err);
+  }
+}
+fetchProductsFromServer();
 let editingId = null;
 let editorImages = [];
 let editorTags = [];
@@ -990,20 +1034,42 @@ btnSaveProduct.addEventListener('click', () => {
   };
 
   if (editingId !== null) {
-    products = products.map(p => p.id === editingId ? { ...p, ...productData, id: editingId } : p);
+    const updatedProd = { ...productData, id: editingId };
+    products = products.map(p => p.id === editingId ? updatedProd : p);
     saveProducts(products);
-    showToast('✅ Product saved successfully!');
+
+    try {
+      adminFetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product: updatedProd })
+      });
+    } catch {}
+
+    showToast('✅ Product saved & published globally!');
   } else {
     const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-    products.push({ id: newId, ...productData });
+    const newProd = { id: newId, ...productData };
+    products.push(newProd);
     saveProducts(products);
-    showToast('🎉 Product created successfully!');
+
+    try {
+      adminFetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product: newProd })
+      });
+    } catch {}
+
+    showToast('🎉 Product created & published globally!');
   }
 
   closeProductEditor();
+  renderProductsTable();
+  if (tabDashboard && tabDashboard.classList.contains('active')) loadDashboard();
 });
 
-function duplicateProduct(id) {
+async function duplicateProduct(id) {
   const p = products.find(prod => prod.id === id);
   if (!p) return;
   const newId = products.length > 0 ? Math.max(...products.map(pr => pr.id)) + 1 : 1;
@@ -1015,15 +1081,31 @@ function duplicateProduct(id) {
   products.push(copy);
   saveProducts(products);
   renderProductsTable();
+  if (tabDashboard && tabDashboard.classList.contains('active')) loadDashboard();
+
+  try {
+    await adminFetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product: copy })
+    });
+  } catch {}
+
   showToast('📋 Product duplicated as Draft!');
 }
 
-function deleteProduct(id) {
+async function deleteProduct(id) {
   const p = products.find(prod => prod.id === id);
   if (!confirm(`Are you sure you want to delete "${p ? p.name : 'this product'}"? This cannot be undone.`)) return;
   products = products.filter(prod => prod.id !== id);
   saveProducts(products);
   renderProductsTable();
+  if (tabDashboard && tabDashboard.classList.contains('active')) loadDashboard();
+
+  try {
+    await adminFetch(`/api/products/${id}`, { method: 'DELETE' });
+  } catch {}
+
   showToast('🗑️ Product deleted.');
 }
 

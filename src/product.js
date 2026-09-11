@@ -157,18 +157,64 @@ function loadProducts() {
 const params = new URLSearchParams(window.location.search);
 const productId = parseInt(params.get('id')) || 1;
 
-const products = loadProducts();
-const product = products.find(p => p.id === productId) || products[0];
+let products = loadProducts();
+let product = products.find(p => p.id === productId) || (productId === 1 ? products[0] : null);
 
 const loadingEl   = document.getElementById('pdp-loading');
 const contentEl   = document.getElementById('pdp-content');
 
+// Sync from backend server
+async function fetchLiveProducts() {
+  try {
+    const res = await fetch('/api/products');
+    if (res.ok) {
+      const data = await res.json();
+      const serverProds = data.products || (Array.isArray(data) ? data : []);
+      if (serverProds.length > 0) {
+        localStorage.setItem('solo_products', JSON.stringify(serverProds));
+        if (!product) {
+          const found = serverProds.find(p => p.id === productId);
+          if (found) window.location.reload();
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Could not sync product from server:', err);
+  }
+}
+fetchLiveProducts();
+
 if (!product) {
   loadingEl.innerHTML = `
-    <h2>Produit non trouvé</h2>
-    <p style="color:var(--text-muted);margin:1rem 0;">Ce produit n'est plus disponible ou a été déplacé.</p>
-    <a href="/" class="btn btn-primary">← Retour à la boutique</a>
+    <h2>Recherche du produit…</h2>
+    <p style="color:var(--text-muted);margin:1rem 0;">Chargement des données en direct depuis le serveur…</p>
   `;
+  fetch(`/api/products?id=${productId}`)
+    .then(r => r.json())
+    .then(p => {
+      if (p && p.id) {
+        const s = localStorage.getItem('solo_products');
+        const list = s ? JSON.parse(s) : [];
+        const idx = list.findIndex(item => item.id === p.id);
+        if (idx !== -1) list[idx] = p;
+        else list.push(p);
+        localStorage.setItem('solo_products', JSON.stringify(list));
+        window.location.reload();
+      } else {
+        loadingEl.innerHTML = `
+          <h2>Produit non trouvé</h2>
+          <p style="color:var(--text-muted);margin:1rem 0;">Ce produit n'est plus disponible ou a été déplacé.</p>
+          <a href="/" class="btn btn-primary">← Retour à la boutique</a>
+        `;
+      }
+    })
+    .catch(() => {
+      loadingEl.innerHTML = `
+        <h2>Produit non trouvé</h2>
+        <p style="color:var(--text-muted);margin:1rem 0;">Ce produit n'est plus disponible ou a été déplacé.</p>
+        <a href="/" class="btn btn-primary">← Retour à la boutique</a>
+      `;
+    });
 } else {
   // Page Title & Meta
   document.title = `${product.name} | Adounas`;

@@ -785,6 +785,28 @@ function initGPSLocation() {
   });
 }
 
+function saveProducts(p) {
+  localStorage.setItem('solo_products', JSON.stringify(p));
+}
+
+async function syncProductsFromServer() {
+  try {
+    const res = await fetch('/api/products');
+    if (res.ok) {
+      const data = await res.json();
+      const serverProds = data.products || (Array.isArray(data) ? data : []);
+      if (serverProds.length > 0) {
+        products = serverProds;
+        saveProducts(serverProds);
+        buildFilterTabs();
+        renderProducts();
+      }
+    }
+  } catch (err) {
+    console.warn('Could not sync products from server:', err);
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.has('search') && searchInput) {
@@ -799,3 +821,4 @@ renderProducts();
 updateCartUI();
 initAuth();
 initGPSLocation();
+syncProductsFromServer();

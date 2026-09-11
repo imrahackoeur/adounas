@@ -1,0 +1,158 @@
+[
+  {
+    "id": 1,
+    "name": "Solo Obsidian Backpack",
+    "price": 35000,
+    "comparePrice": 45000,
+    "category": "Bags",
+    "desc": "Sac à dos en cuir mat haut de gamme conçu pour les minimalistes. Résistant aux intempéries et idéal pour un usage quotidien à Dakar.",
+    "image": "/bag.png",
+    "images": [
+      "/bag.png"
+    ],
+    "stock": 25,
+    "status": "active",
+    "vendor": "Solo Dakar",
+    "sku": "SLO-BP-001",
+    "hasVariants": true,
+    "options": [
+      {
+        "name": "Couleur",
+        "values": [
+          "Noir Mat",
+          "Marron Cuir",
+          "Bleu Nuit"
+        ]
+      },
+      {
+        "name": "Capacité",
+        "values": [
+          "20 Litres",
+          "25 Litres"
+        ]
+      }
+    ],
+    "variants": [
+      {
+        "title": "Noir Mat / 20 Litres",
+        "price": 35000,
+        "stock": 12,
+        "sku": "SLO-BP-BLK-20",
+        "image": "/bag.png"
+      },
+      {
+        "title": "Noir Mat / 25 Litres",
+        "price": 39000,
+        "stock": 8,
+        "sku": "SLO-BP-BLK-25",
+        "image": "/bag.png"
+      },
+      {
+        "title": "Marron Cuir / 20 Litres",
+        "price": 37000,
+        "stock": 7,
+        "sku": "SLO-BP-BRN-20",
+        "image": "/bag.png"
+      },
+      {
+        "title": "Marron Cuir / 25 Litres",
+        "price": 42000,
+        "stock": 5,
+        "sku": "SLO-BP-BRN-25",
+        "image": "/bag.png"
+      },
+      {
+        "title": "Bleu Nuit / 20 Litres",
+        "price": 35000,
+        "stock": 6,
+        "sku": "SLO-BP-BLU-20",
+        "image": "/bag.png"
+      },
+      {
+        "title": "Bleu Nuit / 25 Litres",
+        "price": 39000,
+        "stock": 4,
+        "sku": "SLO-BP-BLU-25",
+        "image": "/bag.png"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Solo Chronos Watch",
+    "price": 55000,
+    "comparePrice": 65000,
+    "category": "Accessories",
+    "desc": "L’esthétique sombre rencontre l’ingénierie de précision. Une montre minimaliste avec une finition noir furtif.",
+    "image": "/watch.png",
+    "images": [
+      "/watch.png"
+    ],
+    "stock": 15,
+    "status": "active",
+    "vendor": "Solo Dakar",
+    "sku": "SLO-WT-002",
+    "hasVariants": true,
+    "options": [
+      {
+        "name": "Couleur",
+        "values": [
+          "Noir Furtif",
+          "Argent Pur",
+          "Or Royal"
+        ]
+      },
+      {
+        "name": "Bracelet",
+        "values": [
+          "Cuir Véritable",
+          "Acier Inox"
+        ]
+      }
+    ],
+    "variants": [
+      {
+        "title": "Noir Furtif / Cuir Véritable",
+        "price": 55000,
+        "stock": 8,
+        "sku": "SLO-WT-BLK-LTR",
+        "image": "/watch.png"
+      },
+      {
+        "title": "Noir Furtif / Acier Inox",
+        "price": 60000,
+        "stock": 4,
+        "sku": "SLO-WT-BLK-STL",
+        "image": "/watch.png"
+      },
+      {
+        "title": "Argent Pur / Cuir Véritable",
+        "price": 55000,
+        "stock": 6,
+        "sku": "SLO-WT-SLV-LTR",
+        "image": "/watch.png"
+      },
+      {
+        "title": "Argent Pur / Acier Inox",
+        "price": 60000,
+        "stock": 5,
+        "sku": "SLO-WT-SLV-STL",
+        "image": "/watch.png"
+      },
+      {
+        "title": "Or Royal / Cuir Véritable",
+        "price": 65000,
+        "stock": 4,
+        "sku": "SLO-WT-GLD-LTR",
+        "image": "/watch.png"
+      },
+      {
+        "title": "Or Royal / Acier Inox",
+        "price": 70000,
+        "stock": 3,
+        "sku": "SLO-WT-GLD-STL",
+        "image": "/watch.png"
+      }
+    ]
+  }
+]

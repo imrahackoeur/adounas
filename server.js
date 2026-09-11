@@ -511,6 +511,134 @@ app.get('/api/chat/thread', adminAuth, (req, res) => {
   res.json(chat);
 });
 
+// ── Products Store (persisted to products.json) ──────────────────────────────
+const PRODUCTS_FILE = path.join(__dirname, 'products.json');
+
+const INITIAL_SEED_PRODUCTS = [
+  {
+    id: 1,
+    name: 'Solo Obsidian Backpack',
+    price: 35000,
+    comparePrice: 45000,
+    category: 'Bags',
+    desc: 'Sac à dos en cuir mat haut de gamme conçu pour les minimalistes. Résistant aux intempéries et idéal pour un usage quotidien à Dakar.',
+    image: '/bag.png',
+    images: ['/bag.png'],
+    stock: 25,
+    status: 'active',
+    vendor: 'Solo Dakar',
+    sku: 'SLO-BP-001',
+    hasVariants: true,
+    options: [
+      { name: 'Couleur', values: ['Noir Mat', 'Marron Cuir', 'Bleu Nuit'] },
+      { name: 'Capacité', values: ['20 Litres', '25 Litres'] }
+    ],
+    variants: [
+      { title: 'Noir Mat / 20 Litres', price: 35000, stock: 12, sku: 'SLO-BP-BLK-20', image: '/bag.png' },
+      { title: 'Noir Mat / 25 Litres', price: 39000, stock: 8, sku: 'SLO-BP-BLK-25', image: '/bag.png' },
+      { title: 'Marron Cuir / 20 Litres', price: 37000, stock: 7, sku: 'SLO-BP-BRN-20', image: '/bag.png' },
+      { title: 'Marron Cuir / 25 Litres', price: 42000, stock: 5, sku: 'SLO-BP-BRN-25', image: '/bag.png' },
+      { title: 'Bleu Nuit / 20 Litres', price: 35000, stock: 6, sku: 'SLO-BP-BLU-20', image: '/bag.png' },
+      { title: 'Bleu Nuit / 25 Litres', price: 39000, stock: 4, sku: 'SLO-BP-BLU-25', image: '/bag.png' }
+    ]
+  },
+  {
+    id: 2,
+    name: 'Solo Chronos Watch',
+    price: 55000,
+    comparePrice: 65000,
+    category: 'Accessories',
+    desc: 'L’esthétique sombre rencontre l’ingénierie de précision. Une montre minimaliste avec une finition noir furtif.',
+    image: '/watch.png',
+    images: ['/watch.png'],
+    stock: 15,
+    status: 'active',
+    vendor: 'Solo Dakar',
+    sku: 'SLO-WT-002',
+    hasVariants: true,
+    options: [
+      { name: 'Couleur', values: ['Noir Furtif', 'Argent Pur', 'Or Royal'] },
+      { name: 'Bracelet', values: ['Cuir Véritable', 'Acier Inox'] }
+    ],
+    variants: [
+      { title: 'Noir Furtif / Cuir Véritable', price: 55000, stock: 8, sku: 'SLO-WT-BLK-LTR', image: '/watch.png' },
+      { title: 'Noir Furtif / Acier Inox', price: 60000, stock: 4, sku: 'SLO-WT-BLK-STL', image: '/watch.png' },
+      { title: 'Argent Pur / Cuir Véritable', price: 55000, stock: 6, sku: 'SLO-WT-SLV-LTR', image: '/watch.png' },
+      { title: 'Argent Pur / Acier Inox', price: 60000, stock: 5, sku: 'SLO-WT-SLV-STL', image: '/watch.png' },
+      { title: 'Or Royal / Cuir Véritable', price: 65000, stock: 4, sku: 'SLO-WT-GLD-LTR', image: '/watch.png' },
+      { title: 'Or Royal / Acier Inox', price: 70000, stock: 3, sku: 'SLO-WT-GLD-STL', image: '/watch.png' }
+    ]
+  }
+];
+
+function loadProducts() {
+  if (!existsSync(PRODUCTS_FILE)) {
+    saveJson(PRODUCTS_FILE, INITIAL_SEED_PRODUCTS);
+    return INITIAL_SEED_PRODUCTS;
+  }
+  return loadJson(PRODUCTS_FILE, INITIAL_SEED_PRODUCTS);
+}
+
+function saveProducts(prods) {
+  saveJson(PRODUCTS_FILE, prods);
+}
+
+// ── GET /api/products ─────────────────────────────────────────────────────────
+app.get('/api/products', (req, res) => {
+  const prods = loadProducts();
+  const id = parseInt(req.query.id);
+  if (id) {
+    const product = prods.find(p => p.id === id);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    return res.json(product);
+  }
+  res.json({ ok: true, products: prods });
+});
+
+// ── POST /api/products (Admin create/update/batch sync) ────────────────────────
+app.post('/api/products', adminAuth, (req, res) => {
+  const { product, products: batchProducts } = req.body;
+
+  if (batchProducts && Array.isArray(batchProducts)) {
+    saveProducts(batchProducts);
+    return res.json({ ok: true, products: batchProducts });
+  }
+
+  if (!product || !product.name) {
+    return res.status(400).json({ error: 'Product name is required.' });
+  }
+
+  const prods = loadProducts();
+  let savedProduct;
+
+  if (product.id) {
+    const idx = prods.findIndex(p => p.id === parseInt(product.id));
+    if (idx !== -1) {
+      prods[idx] = { ...prods[idx], ...product, id: parseInt(product.id) };
+      savedProduct = prods[idx];
+    } else {
+      savedProduct = { ...product, id: parseInt(product.id) };
+      prods.push(savedProduct);
+    }
+  } else {
+    const newId = prods.length > 0 ? Math.max(...prods.map(p => p.id)) + 1 : 1;
+    savedProduct = { ...product, id: newId };
+    prods.push(savedProduct);
+  }
+
+  saveProducts(prods);
+  res.json({ ok: true, product: savedProduct, products: prods });
+});
+
+// ── DELETE /api/products/:id ──────────────────────────────────────────────────
+app.delete('/api/products/:id', adminAuth, (req, res) => {
+  const id = parseInt(req.params.id);
+  let prods = loadProducts();
+  prods = prods.filter(p => p.id !== id);
+  saveProducts(prods);
+  res.json({ ok: true, products: prods });
+});
+
 // ── Orders Store (persisted to orders.json) ───────────────────────────────────
 const ORDERS_FILE = path.join(__dirname, 'orders.json');
 
